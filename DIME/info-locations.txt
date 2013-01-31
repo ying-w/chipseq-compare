@@ -1,0 +1,7 @@
+Files are stored on hpcc and teavee-box
+most of the files are dated early 6/2012
+
+majority of files are found on external and can be found in result_DIME
+however, I did not copy over all the files in data since they are huge
+
+As of 1/2013 there is a new version of DIME out (v1.1) on cran

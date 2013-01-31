@@ -1,0 +1,7 @@
+#Run on 1 processors on hpcc
+#PBS -l walltime=24:00:00
+#PBS -l nodes=1
+#PBS -l arch=x86_64 
+cd ~/proj/result_DIME/
+R --no-save < hn.r
+exit
