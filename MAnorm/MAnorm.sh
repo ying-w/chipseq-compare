@@ -1,5 +1,3 @@
-#http://bcb.dfci.harvard.edu/~gcyuan/MAnorm/R_tutorial.html
-#background bedtools and use wait, run faster MAnorm2.r
 if [ $# -ne 6 ]
 then
   echo "Usage: `basename $0` peak1.bed peak2.bed read1.bed read2.bed bp_shift_1 bp_shift_2"
@@ -34,30 +32,31 @@ sed 's/\s$//g' $4 | awk -v var=$6 'BEGIN {OFS="\t"}
 
 
 echo "StepII: classify common or unique peaks"
-intersectBed -a peak1.bed -b peak2.bed -u | sort -k1,1 -k2,2n -k3,3n > common_peak1.bed &
-intersectBed -a peak2.bed -b peak1.bed -u | sort -k1,1 -k2,2n -k3,3n > common_peak2.bed &
-intersectBed -a peak1.bed -b peak2.bed -v | sort -k1,1 -k2,2n -k3,3n > unique_peak1.bed &
-intersectBed -a peak2.bed -b peak1.bed -v | sort -k1,1 -k2,2n -k3,3n > unique_peak2.bed &
-wait
+intersectBed -a peak1.bed -b peak2.bed -u | sort -k1,1 -k2,2n -k3,3n > common_peak1.bed
+intersectBed -a peak2.bed -b peak1.bed -u | sort -k1,1 -k2,2n -k3,3n > common_peak2.bed
+intersectBed -a peak1.bed -b peak2.bed -v | sort -k1,1 -k2,2n -k3,3n > unique_peak1.bed
+intersectBed -a peak2.bed -b peak1.bed -v | sort -k1,1 -k2,2n -k3,3n > unique_peak2.bed
 
-cat common_peak1.bed common_peak2.bed | mergeBed > common_peak.bed
-#cat common_peak1.bed common_peak2.bed > temp_common_peak.bed
-#mergeBed -i temp_common_peak.bed > common_peak.bed
+#cat common_peak1.bed common_peak2.bed | mergeBed -i - > common_peak.bed
+cat common_peak1.bed common_peak2.bed > temp_common_peak.bed
+mergeBed -i temp_common_peak.bed > common_peak.bed
+
+ 
 
 echo "StepIII: count peak read"
 if [ -f MAnorm.bed ];
 then
-	rm MAnorm.bed
+rm MAnorm.bed
 fi
 coverageBed -a read1.bed -b unique_peak1.bed | sort -k1,1 -k2,2n -k3,3n  | awk 'BEGIN {OFS="\t"} {print $1,$2,$3,"unique_peak1" >> "MAnorm.bed"; print $4 > "unique_peak1_count_read1"}'
-coverageBed -a read2.bed -b unique_peak1.bed | sort -k1,1 -k2,2n -k3,3n  | awk '{print $4 > "unique_peak1_count_read2"}' &
+coverageBed -a read2.bed -b unique_peak1.bed | sort -k1,1 -k2,2n -k3,3n  | awk '{print $4 > "unique_peak1_count_read2"}'
 coverageBed -a read1.bed -b common_peak1.bed | sort -k1,1 -k2,2n -k3,3n  | awk 'BEGIN {OFS="\t"} {print $1,$2,$3,"common_peak1" >> "MAnorm.bed";print $4 > "common_peak1_count_read1"}'
-coverageBed -a read2.bed -b common_peak1.bed | sort -k1,1 -k2,2n -k3,3n  | awk '{print $4 > "common_peak1_count_read2"}' &
+coverageBed -a read2.bed -b common_peak1.bed | sort -k1,1 -k2,2n -k3,3n  | awk '{print $4 > "common_peak1_count_read2"}'
 coverageBed -a read1.bed -b common_peak2.bed | sort -k1,1 -k2,2n -k3,3n  | awk 'BEGIN {OFS="\t"} {print $1,$2,$3,"common_peak2"  >> "MAnorm.bed";print $4 > "common_peak2_count_read1"}'
-coverageBed -a read2.bed -b common_peak2.bed |sort -k1,1 -k2,2n -k3,3n  |  awk '{print $4 > "common_peak2_count_read2"}' &
+coverageBed -a read2.bed -b common_peak2.bed |sort -k1,1 -k2,2n -k3,3n  |  awk '{print $4 > "common_peak2_count_read2"}'
 coverageBed -a read1.bed -b unique_peak2.bed | sort -k1,1 -k2,2n -k3,3n  | awk 'BEGIN {OFS="\t"} {print $1,$2,$3,"unique_peak2">> "MAnorm.bed";print $4 > "unique_peak2_count_read1"}'
-coverageBed -a read2.bed -b unique_peak2.bed | sort -k1,1 -k2,2n -k3,3n  | awk '{print $4 > "unique_peak2_count_read2"}' &
-wait
+coverageBed -a read2.bed -b unique_peak2.bed | sort -k1,1 -k2,2n -k3,3n  | awk '{print $4 > "unique_peak2_count_read2"}'
+
 
 cat common_peak1_count_read1 common_peak2_count_read1 > common_peak_count_read1
 cat common_peak1_count_read2 common_peak2_count_read2 > common_peak_count_read2
@@ -66,7 +65,7 @@ cat unique_peak1_count_read2 common_peak1_count_read2 common_peak2_count_read2 u
 
 if [ -f MAnorm_merge.bed ];
 then
-	rm MAnorm_merge.bed
+rm MAnorm_merge.bed
 fi
 
 cat  unique_peak1.bed | awk 'BEGIN {OFS="\t"} {print $1,$2,$3,"unique_peak1" >> "MAnorm_merge.bed"}'
@@ -78,12 +77,15 @@ cat unique_peak1_count_read1 merge_common_read1  unique_peak2_count_read1 > merg
 cat unique_peak1_count_read2 merge_common_read2  unique_peak2_count_read2 > merge_common_peak_count_read2
 
 
+
+
 echo "SetpIV: normalize using common peaks"
 #R --vanilla MAnorm.r >Rcommand.out
-R CMD BATCH ./MAnorm2.r Rcommand.out
+R CMD BATCH ./MAnorm.r Rcommand.out
 
 awk 'BEGIN{OFS="\t"}{if($4~/1/) print $1,$2,$3,$7>"sample1_peaks.wig"}' MAnorm_result.xls
 awk 'BEGIN{OFS="\t"}{if($4~/2/) print $1,$2,$3,$7>"sample2_peaks.wig"}' MAnorm_result.xls
+
 
 rm temp_common_peak.bed
 rm *count*

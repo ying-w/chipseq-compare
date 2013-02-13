@@ -11,3 +11,12 @@ Improvements
 ** done simply by concatinating the files, proper way would be to downsample so they have equal weight
 * option to run bedtools run in parallel (faster if you have enough IO)
 * allow to specify filename for directory
+
+Notes
+-----
+There is something wrong with how the pvalues are calculated, in my latest revisions I have removed this feature
+I backgrounding bedtools offers significant speedup.
+
+v2 will retain the same input/output as the original script (same as the one from the paper)
+v3 will have different input/output options but the same methods will be applied
+
