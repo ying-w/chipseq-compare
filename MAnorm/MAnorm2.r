@@ -2,15 +2,15 @@
 library(MASS) #required for rlm
 library(affy)
 cat('test\n')
-common_peak_count_read1<-read.table("common_peak_count_read1",header=FALSE)
-common_peak_count_read2<-read.table("common_peak_count_read2",header=FALSE)
-peak_count_read1 <- read.table("peak_count_read1",header=FALSE)
-peak_count_read2 <- read.table("peak_count_read2",header=FALSE)
-merge_common_peak_count_read1<-read.table("merge_common_peak_count_read1",header=FALSE)
-merge_common_peak_count_read2<-read.table("merge_common_peak_count_read2",header=FALSE)
+common_peak_count_read1<-read.table("tmp_common_peak_count_read1",header=FALSE)
+common_peak_count_read2<-read.table("tmp_common_peak_count_read2",header=FALSE)
+peak_count_read1 <- read.table("tmp_peak_count_read1",header=FALSE)
+peak_count_read2 <- read.table("tmp_peak_count_read2",header=FALSE)
+merge_common_peak_count_read1<-read.table("tmp_merge_common_peak_count_read1",header=FALSE)
+merge_common_peak_count_read2<-read.table("tmp_merge_common_peak_count_read2",header=FALSE)
 
-table_MA <-read.table("MAnorm.bed",header=FALSE)
-table_merge_MA <- read.table("MAnorm_merge.bed",header=FALSE)
+table_MA <-read.table("tmp_MAnorm.bed",header=FALSE)
+table_merge_MA <- read.table("tmp_MAnorm_merge.bed",header=FALSE)
 
 M<-log2((common_peak_count_read1+1)/(common_peak_count_read2+1))
 A<-0.5*log2((common_peak_count_read1+1)*(common_peak_count_read2+1))
