@@ -12,12 +12,12 @@ then
 		{if ($1~/chr/ && $1 !="chrM" && $1 !~/random/ && $3>$2 && $2>0 && $3>0)
 			print $1,$2,$3 > "tmp_peak1.bed";
 		else 
-			print $0 > "tmp_peak1_exclude.bed"}'
+			print $0 > "tmp_peak1_exclude.bed"}' &
 	zcat $2 | sed 's/\s$//g' | awk 'BEGIN {OFS="\t"}
 		{if ($$1~/chr/ && 1 !="chrM"  && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
 			print $1,$2,$3 > "tmp_peak2.bed";
 		else 
-			print $0 > "tmp_peak2_exclude.bed"}' 
+			print $0 > "tmp_peak2_exclude.bed"}' &
 	#shift NOT extend, ideally would also check for end of chr
 	zcat $3 | sed 's/\s$//g' | awk -v shift1=$6 'BEGIN {OFS="\t"}
 		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
@@ -25,14 +25,15 @@ then
 		else if ($1~/chr/  && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift1 && $3>shift1)
 			print $1,$2-shift1,$3-shift1 > "tmp_read1.bed";
 		else 
-			print $0 > "tmp_read1_exclude.bed"}'
+			print $0 > "tmp_read1_exclude.bed"}' &
 	zcat $4 | sed 's/\s$//g' | awk -v shift2=$7 'BEGIN {OFS="\t"}
 		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
 			print $1,$2+shift2,$3+shift2 > "tmp_read2.bed";
 		else if ($1~/chr/  && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift2 && $3>shift2)
 			print $1,$2-shift2,$3-shift2 > "tmp_read2.bed";
 		else 
-			print $0 > "tmp_read2_exclude.bed"}'
+			print $0 > "tmp_read2_exclude.bed"}' &
+    wait
 	echo "wc -l read1.bed `wc -l read1.bed`" >> MAnorm.log
 	echo "wc -l read2.bed `wc -l read2.bed`" >> MAnorm.log
 	echo "wc -l read1_exclude.bed `wc -l read1_exclude.bed`" >> MAnorm.log
@@ -51,12 +52,12 @@ then
 		{if ($1~/chr/ && $1 !="chrM" && $1 !~/random/ && $3>$2 && $2>0 && $3>0)
 			print $1,$2,$3> "./"fname"/tmp_peak1.bed";
 		else 
-			print $0 > "./"fname"/tmp_peak1_exclude.bed"}'
+			print $0 > "./"fname"/tmp_peak1_exclude.bed"}' &
 	zcat $3 | sed 's/\s$//g' | awk -v fname="$fname" 'BEGIN {OFS="\t"}
 		{if ($$1~/chr/ && 1 !="chrM"  && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
 			print $1,$2,$3> "./"fname"/tmp_peak2.bed";
 		else 
-			print $0 > "./"fname"/tmp_peak2_exclude.bed"}' 
+			print $0 > "./"fname"/tmp_peak2_exclude.bed"}' &
 	#shift NOT extend, ideally would also check for end of chr
 	zcat $4 | sed 's/\s$//g' | awk -v fname="$fname" -v shift1a=$8 'BEGIN {OFS="\t"}
 		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
@@ -64,28 +65,29 @@ then
 		else if ($1~/chr/  && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift1a && $3>shift1a)
 			print $1,$2-shift1a,$3-shift1a> "./"fname"/tmp_read1a.bed";
 		else 
-			print $0 > "./"fname"/tmp_read1a_exclude.bed"}'
+			print $0 > "./"fname"/tmp_read1a_exclude.bed"}' &
 	zcat $5 | sed 's/\s$//g' | awk -v fname="$fname" -v shift1b=$9 'BEGIN {OFS="\t"}
 		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
 			print $1,$2+shift1b,$3+shift1b> "./"fname"/tmp_read1b.bed";
 		else if ($1~/chr/  && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift1b && $3>shift1b)
 			print $1,$2-shift1b,$3-shift1b> "./"fname"/tmp_read1b.bed";
 		else 
-			print $0 > "./"fname"/tmp_read1b_exclude.bed"}'	
+			print $0 > "./"fname"/tmp_read1b_exclude.bed"}'	&
 	zcat $6 | sed 's/\s$//g' | awk -v fname="$fname" -v shift2a=$10 'BEGIN {OFS="\t"}
 		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
 			print $1,$2+shift2a,$3+shift2a> "./"fname"/tmp_read2a.bed";
 		else if ($1~/chr/  && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift2a && $3>shift2a)
 			print $1,$2-shift2a,$3-shift2a> "./"fname"/tmp_read2a.bed";
 		else 
-			print $0 > "./"fname"/tmp_read2a_exclude.bed"}'
+			print $0 > "./"fname"/tmp_read2a_exclude.bed"}' &
 	zcat $7 | sed 's/\s$//g' | awk -v fname="$fname" -v shift2b=$11 'BEGIN {OFS="\t"}
 		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
 			print $1,$2+shift2b,$3+shift2b> "./"fname"/tmp_read2b.bed";
 		else if ($1~/chr/  && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift2b && $3>shift2b)
 			print $1,$2-shift2b,$3-shift2b> "./"fname"/tmp_read2b.bed";
 		else 
-			print $0 > "./"fname"/tmp_read2b_exclude.bed"}'
+			print $0 > "./"fname"/tmp_read2b_exclude.bed"}' &
+    wait
 	cat ./$fname/tmp_read1a.bed ./$fname/tmp_read1b.bed > ./$fname/tmp_read1.bed
 	cat ./$fname/tmp_read2a.bed ./$fname/tmp_read2b.bed > ./$fname/tmp_read2.bed
 	echo "wc -l tmp_read1a.bed `wc -l ./$fname/tmp_read1a.bed`" >> ./$fname/${1}.log
