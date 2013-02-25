@@ -1,0 +1,20 @@
+#selected code conversion
+% diffCt = data1-data0;
+% meanCt(:,i)=(data1+data0)./2;
+% chr_size(i) = length(data0)
+% spanMean = 0.6;
+% spanVar = 0.1;
+% estimate mean using loess smoother and spanMean of data
+diffCt_loessMean(1:chr_size(i),i)=smooth(meanCt(1:chr_size(i),i),diffCt(1:chr_size(i),i),spanMean,'loess');
+% substract estimated mean from observations points
+norm_diffCt(1:chr_size(i),i)=diffCt(1:chr_size(i),i)-diffCt_loessMean(1:chr_size(i),i);
+% estimate a running variance using loess smoother and 10% of data
+norm_diffCt_loessVar(1:chr_size(i),i)=smooth(meanCt(1:chr_size(i),i),abs(norm_diffCt(1:chr_size(i),i)),spanVar,'loess');
+% standardize observation points by dividing it with its estimated variance
+% pre-processing avoid NaN (0 divided by 0). Changing all entries of 0
+% to eps
+eps = 2^(-52)
+norm_diffCt(norm_diffCt==0)=eps;
+norm_diffCt_loessVar(norm_diffCt_loessVar==0)=eps;
+
+varNorm_diffCt(1:chr_size(i),i)=norm_diffCt(1:chr_size(i),i)./norm_diffCt_loessVar(1:chr_size(i),i)

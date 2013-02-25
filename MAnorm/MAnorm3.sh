@@ -188,8 +188,8 @@ fi
 #not sure how to do this w/out awk
 awk 'BEGIN {OFS="\t"} {print $1,$2,$3,"unique_peak1"}' ./$fname/tmp_unique_peak1_count_read1 >>  ./$fname/tmp_MAnorm.bed
 awk 'BEGIN {OFS="\t"} {print $1,$2,$3,"common_peak1"}' ./$fname/tmp_common_peak1_count_read1 >>  ./$fname/tmp_MAnorm.bed
-awk 'BEGIN {OFS="\t"} {print $1,$2,$3,"common_peak2"}' ./$fname/tmp_common_peak1_count_read2 >>  ./$fname/tmp_MAnorm.bed
-awk 'BEGIN {OFS="\t"} {print $1,$2,$3,"unique_peak2"}' ./$fname/tmp_unique_peak1_count_read2 >>  ./$fname/tmp_MAnorm.bed
+awk 'BEGIN {OFS="\t"} {print $1,$2,$3,"common_peak2"}' ./$fname/tmp_common_peak2_count_read1 >>  ./$fname/tmp_MAnorm.bed
+awk 'BEGIN {OFS="\t"} {print $1,$2,$3,"unique_peak2"}' ./$fname/tmp_unique_peak2_count_read1 >>  ./$fname/tmp_MAnorm.bed
 
 cat ./$fname/tmp_common_peak1_count_read1 ./$fname/tmp_common_peak2_count_read1 | cut -f 4 > ./$fname/tmp_common_peak_count_read1 &
 cat ./$fname/tmp_common_peak1_count_read2 ./$fname/tmp_common_peak2_count_read2 | cut -f 4 > ./$fname/tmp_common_peak_count_read2 &
@@ -234,7 +234,7 @@ cd ./$fname/
 #doesnt load .R that might slow things down but still loads usr+global env 
 #doesnt redirect nicely
 #R CMD BATCH ../MAnorm3.r ${1}_Rcommand.out 
-echo("R CURRENTLY DISABLED!!!")
+echo "R CURRENTLY DISABLED!!!"
 cd ..
 
 #This is not a proper wig, I think it is a bed (check)
