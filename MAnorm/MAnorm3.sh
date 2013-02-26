@@ -16,7 +16,11 @@ then
 	#TODO: write catch for directory creation
 	mkdir $fname 
 	echo $@ > ./$fname/${1}.log
+    echo `date` >> ./$fname/${1}.log    
 	echo "StepI: clean input"
+    #newlines do not work in echo by default, must use echo -e which is not POSIX
+    options="$4 shift: $6 $5 shift: $7"  
+    printf "%b\n" "$options" >> ./$fname/${1}.log # http://wiki.bash-hackers.org/commands/builtin/printf
 	#global variables must passed into awk using -v
 	zcat $2 | sed 's/\s$//g' | awk -v fname="$fname" 'BEGIN {OFS="\t"}
 		{if ($1~/chr/ && $1 !="chrM" && $1 !~/random/ && $3>$2 && $2>0 && $3>0)
@@ -56,47 +60,53 @@ then
 	fname=$1 
 	mkdir $fname 
 	echo $@ > ./$fname/${1}.log
+    echo `date` >> ./$fname/${1}.log
 	echo "StepI: clean input"
+    #newlines do not work in echo by default, must use echo -e which is not POSIX
+    options="$4 shift: $8 $5 shift: $9 \n$6 shift: ${10} \n$7 shift: ${11}"  
+    printf "%b\n" "$options" >> ./$fname/${1}.log # http://wiki.bash-hackers.org/commands/builtin/printf
+    
 	zcat $2 | sed 's/\s$//g' | awk -v fname="$fname" 'BEGIN {OFS="\t"}
 		{if ($1~/chr/ && $1 !="chrM" && $1 !~/random/ && $3>$2 && $2>0 && $3>0)
 			print $1,$2,$3 > "./"fname"/tmp_peak1.bed";
 		else 
 			print $0 > "./"fname"/tmp_peak1_exclude.bed"}' &
 	zcat $3 | sed 's/\s$//g' | awk -v fname="$fname" 'BEGIN {OFS="\t"}
-		{if ($$1~/chr/ && 1 !="chrM"  && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
+		{if ($$1~/chr/ && 1 !="chrM" && $1 !~/random/ && $3>$2 && $2>0 && $3>0)
 			print $1,$2,$3 > "./"fname"/tmp_peak2.bed";
 		else 
 			print $0 > "./"fname"/tmp_peak2_exclude.bed"}' &
 	#shift NOT extend, ideally would also check for end of chr
 	zcat $4 | sed 's/\s$//g' | awk -v fname="$fname" -v shift1a=$8 'BEGIN {OFS="\t"}
-		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
+		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2 && $2>0 && $3>0)
 			print $1,$2+shift1a,$3+shift1a > "./"fname"/tmp_read1a.bed";
-		else if ($1~/chr/  && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift1a && $3>shift1a)
+		else if ($1~/chr/ && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2 && $2>shift1a && $3>shift1a)
 			print $1,$2-shift1a,$3-shift1a > "./"fname"/tmp_read1a.bed";
 		else 
 			print $0 > "./"fname"/tmp_read1a_exclude.bed"}' &
 	zcat $5 | sed 's/\s$//g' | awk -v fname="$fname" -v shift1b=$9 'BEGIN {OFS="\t"}
-		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
+		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2 && $2>0 && $3>0)
 			print $1,$2+shift1b,$3+shift1b > "./"fname"/tmp_read1b.bed";
-		else if ($1~/chr/  && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift1b && $3>shift1b)
+		else if ($1~/chr/ && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2 && $2>shift1b && $3>shift1b)
 			print $1,$2-shift1b,$3-shift1b > "./"fname"/tmp_read1b.bed";
 		else 
 			print $0 > "./"fname"/tmp_read1b_exclude.bed"}'	&
-	zcat $6 | sed 's/\s$//g' | awk -v fname="$fname" -v shift2a=$10 'BEGIN {OFS="\t"}
-		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
+	zcat $6 | sed 's/\s$//g' | awk -v fname="$fname" -v shift2a=${10} 'BEGIN {OFS="\t"}
+		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2 && $2>0 && $3>0)
 			print $1,$2+shift2a,$3+shift2a > "./"fname"/tmp_read2a.bed";
-		else if ($1~/chr/  && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift2a && $3>shift2a)
+		else if ($1~/chr/ && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2 && $2>shift2a && $3>shift2a)
 			print $1,$2-shift2a,$3-shift2a > "./"fname"/tmp_read2a.bed";
 		else 
 			print $0 > "./"fname"/tmp_read2a_exclude.bed"}' &
-	zcat $7 | sed 's/\s$//g' | awk -v fname="$fname" -v shift2b=$11 'BEGIN {OFS="\t"}
-		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
+	zcat $7 | sed 's/\s$//g' | awk -v fname="$fname" -v shift2b=${11} 'BEGIN {OFS="\t"}
+		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2 && $2>0 && $3>0)
 			print $1,$2+shift2b,$3+shift2b > "./"fname"/tmp_read2b.bed";
-		else if ($1~/chr/  && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift2b && $3>shift2b)
+		else if ($1~/chr/ && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2 && $2>shift2b && $3>shift2b)
 			print $1,$2-shift2b,$3-shift2b > "./"fname"/tmp_read2b.bed";
 		else 
 			print $0 > "./"fname"/tmp_read2b_exclude.bed"}' &
     wait
+    # output combined reads to make sure further steps don't fail, a bit less efficient this way though
 	cat ./$fname/tmp_read1a.bed ./$fname/tmp_read1b.bed > ./$fname/tmp_read1.bed
 	cat ./$fname/tmp_read2a.bed ./$fname/tmp_read2b.bed > ./$fname/tmp_read2.bed
 
@@ -126,7 +136,13 @@ intersectBed -a ./$fname/tmp_peak1.bed -b ./$fname/tmp_peak2.bed -v | sort -k1,1
 intersectBed -a ./$fname/tmp_peak2.bed -b ./$fname/tmp_peak1.bed -v | sort -k1,1 -k2,2n -k3,3n > ./$fname/tmp_unique_peak2.bed &
 wait
 
-cat ./$fname/tmp_common_peak1.bed ./$fname/tmp_common_peak2.bed | mergeBed > ./$fname/tmp_common_peak.bed
+# WARNING!!! must sort before merging, above sort cmd is faster but this is more clear
+cat ./$fname/tmp_common_peak1.bed ./$fname/tmp_common_peak2.bed | sortBed | mergeBed > ./$fname/tmp_common_peak.bed
+
+echo "wc -l tmp_common_peak1.bed `wc -l ./$fname/tmp_common_peak1.bed | cut -f 1 -d " "`" >> ./$fname/${1}.log
+echo "wc -l tmp_common_peak2.bed `wc -l ./$fname/tmp_common_peak2.bed | cut -f 1 -d " "`" >> ./$fname/${1}.log
+echo "wc -l tmp_unique_peak1.bed `wc -l ./$fname/tmp_unique_peak1.bed | cut -f 1 -d " "`" >> ./$fname/${1}.log
+echo "wc -l tmp_unique_peak2.bed `wc -l ./$fname/tmp_unique_peak2.bed | cut -f 1 -d " "`" >> ./$fname/${1}.log
 echo "wc -l tmp_common_peak.bed `wc -l ./$fname/tmp_common_peak.bed | cut -f 1 -d " "`" >> ./$fname/${1}.log
 
 #####################################################################################################
@@ -218,9 +234,9 @@ then
 fi
 wait
 
-cat ./$fname/tmp_unique_peak1.bed | awk -v fname="$fname" 'BEGIN {OFS="\t"} {print $1,$2,$3,"tmp_unique_peak1" >> "./"fname"/tmp_MAnorm_merge.bed"}'
-awk 'BEGIN {OFS="\t"} {print $1,$2,$3,"merged_common_peak"}' ./$fname/tmp_merge_common_read1 >> ./$fname/tmp_MAnorm_merge.bed
-cat ./$fname/tmp_unique_peak2.bed | awk -v fname="$fname" 'BEGIN {OFS="\t"} {print $1,$2,$3,"tmp_unique_peak2" >> "./"fname"/tmp_MAnorm_merge.bed"}'
+cat ./$fname/tmp_unique_peak1_count_read1 | awk -v fname="$fname" 'BEGIN {OFS="\t"} {print $1,$2,$3,"tmp_unique_peak1" >> "./"fname"/tmp_MAnorm_merge.bed"}'
+cat ./$fname/tmp_merge_common_read1 | awk 'BEGIN {OFS="\t"} {print $1,$2,$3,"merged_common_peak"}' >> ./$fname/tmp_MAnorm_merge.bed
+cat ./$fname/tmp_unique_peak2_count_read1 | awk -v fname="$fname" 'BEGIN {OFS="\t"} {print $1,$2,$3,"tmp_unique_peak2" >> "./"fname"/tmp_MAnorm_merge.bed"}'
 
 cat ./$fname/tmp_unique_peak1_count_read1 ./$fname/tmp_merge_common_read1 ./$fname/tmp_unique_peak2_count_read1 | cut -f 4 > ./$fname/tmp_merge_common_peak_count_read1
 cat ./$fname/tmp_unique_peak1_count_read2 ./$fname/tmp_merge_common_read2 ./$fname/tmp_unique_peak2_count_read2 | cut -f 4 > ./$fname/tmp_merge_common_peak_count_read2
@@ -233,8 +249,8 @@ cd ./$fname/
 #R --no-restore --save < ../MAnorm2.r ${1}_Rcommand.out 
 #doesnt load .R that might slow things down but still loads usr+global env 
 #doesnt redirect nicely
-#R CMD BATCH ../MAnorm3.r ${1}_Rcommand.out 
-echo "R CURRENTLY DISABLED!!!"
+R CMD BATCH ../MAnorm3.r ${1}_Rcommand.out 
+#echo "R CURRENTLY DISABLED!!!"
 cd ..
 
 #This is not a proper wig, I think it is a bed (check)
@@ -245,5 +261,5 @@ cd ..
 
 #####################################################################################################
 #cleanup
-echo("CLEANUP DISABLED")
-#rm ./$fname/tmp_*
+#echo "CLEANUP DISABLED"
+rm ./$fname/tmp_*

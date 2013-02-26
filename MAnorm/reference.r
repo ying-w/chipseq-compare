@@ -262,7 +262,7 @@ pv.DEedgeR = function(pv,group1,group2,label1="Group 1",label2="Group 2",blockLi
     # reslist = pv.listadd(reslist,res)   
 # }
 
-#edgeR example
+#edgeR example from manual
 # group <- factor(c(1,1,2,2))
 # y <- DGEList(counts=x,group=group)
 # y <- calcNormFactors(y)
@@ -278,5 +278,6 @@ pv.DEedgeR = function(pv,group1,group2,label1="Group 1",label2="Group 2",blockLi
 # fit <- glmFit(y,design)
 # lrt <- glmLRT(fit,coef=2)
 # topTags(lrt)
+# most of the stuff stored by glmFit() and glmLRT() overlap but could be diff
 
 #In diffbind data is eventually stored in GR$contrasts[[1]]$edgeR$

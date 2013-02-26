@@ -71,51 +71,101 @@ normalizeMA = function(subset_mat, full_mat, method="loess", log.it=TRUE)
     return(full_mat)
 }
 
+extractTitle = function(titles, numsplit = 2) {
+    # possibilities are:
+    #  title1, title2
+    #  title1_rep1, title1_rep2, title2_rep1, title2_rep2
+    #  title1, title2, title3 #with numsplit = 3
+    # code written for readability not speed
+    
+    if(length(titles) %% numsplit) { stop(paste("Titles not a multiple of", numsplit)) }
+    numreps = length(titles) / numsplit
+    ret = rep("", numsplit)
+    
+    if(numreps == 1) {
+        return(titles)
+    }
+    
+    for(i in 1:numsplit) {
+        current_title = titles[((i-1)*numreps+1):(i*numreps)]
+        #make all of the titles the same length
+        current_title_list = lapply(strsplit(current_title, ""), "[", 1:min(nchar(current_title)))
+        current_subset = rep(FALSE, min(nchar(current_title)))
+        #look for first mismatch since that is where you stop
+        for(j in 2:numreps) { # numrep === length(current_title_list)
+            current_subset = current_subset | current_title_list[[1]] != current_title_list[[j]]            
+        }
+        #current_subset will be TRUE if there is ANY mismatch
+        #if NO mismatch then set end to end of match
+        current_end = min(which(current_subset)-1, min(nchar(current_title)))
+        if(current_end == 0) { ret[i] = paste0("Sample", i) }
+        else { ret[i] = substr(current_title[1], 1,  current_end) }
+    }
+    ret
+}
+
 # parts from pv.DBAplotMA() in DiffBind/R/analyze.R
 # mergeReps can be append or add, c("append", "add")
 # use sel to obtain subset (say fdr cutoff)
 plotSmoothMA = function(mat, pvals = NULL, pval_cut = 0.01, plotfun = smoothScatter, 
     mergeReps = "append", sel=rep(FALSE, nrow(mat)), myTitle = NULL) {
     #takes UNlogged mat
-    if(ncol(mat) > 2) {
-        if(mergeReps == "append") { 
-            message("Appending replicates")
-            x = log2(mat[,c(1:(ncol(mat)/2))]+1)
-            y = log2(mat[,c((ncol(mat)/2+1):ncol(mat))]+1)
-            #only works since R is column order
-            dim(x) = NULL
-            dim(y) = NULL
-        } else if(mergeReps == "add") {
-            message("Adding replicates")
-            x = log2(rowSums(mat[,c(1:(ncol(mat)/2))])+2)
-            y = log2(rowSums(mat[,c((ncol(mat)/2):ncol(mat))])+2)
-        } else { stop("Invalid mergeReps") }
+    if(class(mat) == "DGELRT") {
+        M = mat$table$logFC
+        A = mat$table$logCPM
+        
+        expr_name = extractTitle(rownames(mat$sample))
     }
-    # M = res$Fold
-    # A = res$Conc
-    # idx = res$FDR <= th
-    M = x - y
-    A = (x + y) / 2
+    else if(class(mat) == "matrix" || class(mat) == "data.frame") {
+        if(ncol(mat) > 2) {
+            if(mergeReps == "append") { 
+                message("Appending replicates")
+                x = log2(mat[,c(1:(ncol(mat)/2))]+1)
+                y = log2(mat[,c((ncol(mat)/2+1):ncol(mat))]+1)
+                #only works since R is column order
+                dim(x) = NULL
+                dim(y) = NULL
+            } else if(mergeReps == "add") {
+                message("Adding replicates")
+                x = log2(rowSums(mat[,c(1:(ncol(mat)/2))])+2)
+                y = log2(rowSums(mat[,c((ncol(mat)/2):ncol(mat))])+2)
+            } else { stop("Invalid mergeReps") }
+        }
+        # M = res$Fold
+        # A = res$Conc
+        # idx = res$FDR <= th
+        M = x - y
+        A = (x + y) / 2
+        
+        expr_name = extractTitle(colnames(mat))
+        
+    } else { stop("Unknown matrix type") }
 
-    x_name = substr(colnames(mat)[1], 1, min(which(!(strsplit(colnames(mat)[1], "")[[1]] == 
-        strsplit(colnames(mat)[2], "")[[1]]))-1, nchar(x_name)))
-    y_name = substr(colnames(mat)[ncol(mat)], 1, min(which(!(strsplit(colnames(mat)[ncol(mat)/2+1], "")[[1]] == 
-        strsplit(colnames(mat)[ncol(mat)], "")[[1]]))-1, nchar(y_name)))
+    # todo: sel calculation below is wrong, if reps then sel is expanded to fill
     if(all(sel == FALSE) && !is.null(pvals)) {
         sel = pvals < pval_cut
         myTitle = sprintf('%s Binding Affinity: %s vs %s (%s of %s w/%s < %1.3f)',
-            'TF', x_name, y_name, sum(sel), length(A), "pval", pval_cut)
+            'TF', expr_name[1], expr_name[2], sum(sel), length(A), "pval", pval_cut)
     } else if (sum(sel) > 0) {
         myTitle = sprintf('%s Binding Affinity: %s vs %s (%s of %s highlighted)',
-            'TF', x_name, y_name, sum(sel), length(A))
+            'TF', expr_name[1], expr_name[2], sum(sel), length(A))
     } else {
         myTitle = sprintf('%s Binding Affinity: %s vs %s (%s sites)',
-            'TF', x_name, y_name, length(A))
+            'TF', expr_name[1], expr_name[2], length(A))
     }
-    plotfun(A, M, pch = 20, cex = 0.33, xlim = c(0, ceiling(max(A))),
-        xlab = 'log concentration',
-        ylab = sprintf('log fold change: %s - %s', x_name, y_name),
-        main = myTitle) #if length(A) is null then nothing will be printed
+    if(identical(plotfun, smoothScatter)) { #use identical() not ==
+        plotfun(A, M, pch = 20, cex = 0.33, xlim = c(0, ceiling(max(A))),
+            xlab = 'log concentration',
+            ylab = sprintf('log fold change: %s - %s', expr_name[1], expr_name[2]),
+            postPlotHook=grid(), 
+            main = myTitle, panel.first=grid()) #if length(A) is null then nothing will be printed
+    } else {
+        plotfun(A, M, pch = 20, cex = 0.33, xlim = c(0, ceiling(max(A))),
+            xlab = 'log concentration',
+            ylab = sprintf('log fold change: %s - %s', expr_name[1], expr_name[2]),
+            main = myTitle, panel.first=grid()) #if length(A) is null then nothing will be printed
+    }
+
     abline(h=0,col='dodgerblue')
     points(A[sel], M[sel], pch=20, cex=0.33, col=2) #highlight significant
 }
@@ -132,6 +182,10 @@ if(length(list.files(pattern="read1a.bed")) == 1) {  #11 arguments used, prob co
     peak_count_read2a = read.table("tmp_peak_count_read2a",header=FALSE)
     peak_count_read1b = read.table("tmp_peak_count_read1b",header=FALSE)
     peak_count_read2b = read.table("tmp_peak_count_read2b",header=FALSE)
+    merge_common_only_count_read1a = read.table("tmp_merge_common_read1a", header=FALSE)
+    merge_common_only_count_read1b = read.table("tmp_merge_common_read1b", header=FALSE)
+    merge_common_only_count_read2a = read.table("tmp_merge_common_read2a", header=FALSE)
+    merge_common_only_count_read2b = read.table("tmp_merge_common_read2b", header=FALSE)
     merge_common_peak_count_read1a = read.table("tmp_merge_common_peak_count_read1a",header=FALSE)
     merge_common_peak_count_read2a = read.table("tmp_merge_common_peak_count_read2a",header=FALSE)
     merge_common_peak_count_read1b = read.table("tmp_merge_common_peak_count_read1b",header=FALSE)
@@ -140,15 +194,23 @@ if(length(list.files(pattern="read1a.bed")) == 1) {  #11 arguments used, prob co
         common_peak_count_read2a[,4], common_peak_count_read2b[,4])
     all_count_mat = cbind(peak_count_read1a[,4], peak_count_read1b[,4], 
         peak_count_read2a[,4], peak_count_read2b[,4])
+    common_merge_count_mat = cbind(merge_common_only_count_read1a[,4], merge_common_only_count_read1b[,4],
+        merge_common_only_count_read2a[,4], merge_common_only_count_read2b[,4])
+    all_merge_count_mat = cbind(merge_common_peak_count_read1a[,4], merge_common_peak_count_read1b[,4], 
+        merge_common_peak_count_read2a[,4], merge_common_peak_count_read2b[,4])
 } else { 
     common_peak_count_read1 = read.table("tmp_common_peak_count_read1",header=FALSE)
     common_peak_count_read2 = read.table("tmp_common_peak_count_read2",header=FALSE)
     peak_count_read1 = read.table("tmp_peak_count_read1",header=FALSE)
     peak_count_read2 = read.table("tmp_peak_count_read2",header=FALSE)
+    merge_common_only_count_read1 = read.table("tmp_merge_common_read1", header=FALSE)
+    merge_common_only_count_read2 = read.table("tmp_merge_common_read2", header=FALSE)
     merge_common_peak_count_read1 = read.table("tmp_merge_common_peak_count_read1",header=FALSE)
     merge_common_peak_count_read2 = read.table("tmp_merge_common_peak_count_read2",header=FALSE)
     common_count_mat = cbind(common_peak_count_read1, common_peak_count_read2)
     all_count_mat = cbind(peak_count_read1, peak_count2)
+    common_merge_count_mat = cbind(merge_common_only_count_read1, merge_common_only_count_read2)
+    all_merge_count_mat = cbind(merge_common_peak_count_read1, merge_common_peak_count_read2)
 }
 table_MA = read.table("tmp_MAnorm.bed",header=FALSE)
 table_merge_MA = read.table("tmp_MAnorm_merge.bed",header=FALSE)
@@ -173,8 +235,12 @@ if(length(f_path) > 2)
 }
 colnames(all_count_mat) = c(x_name, y_name)
 colnames(common_count_mat) = c(x_name, y_name)
-normalized_all_count_mat = normalizeMA(common_count_mat+1, all_count_mat+1, method="rlm")
+normalized_all_count_mat = normalizeMA(common_count_mat+1, all_count_mat+1, method="rlm")-1
 #subset_mat = common_count_mat+1; full_mat = all_count_mat+1 #DEBUG
+
+png(paste0(f_prefix, '_MAsmooth_before_rescaling.png'))
+plotSmoothMA(common_count_mat)
+dev.off()
 
 png(paste0(f_prefix, '_MAsmooth_before_rescaling_all.png'))
 plotSmoothMA(all_count_mat)
@@ -184,37 +250,79 @@ png(paste0(f_prefix, '_MAsmooth_before_rescaling_all_common.png'))
 plotSmoothMA(all_count_mat, sel = table_MA[,4] == "common_peak1" | table_MA[,4] == "common_peak2")
 dev.off()
 
-png(paste0(f_prefix, '_MAsmooth_before_rescaling.png'))
-plotSmoothMA(common_count_mat)
-dev.off()
 
-png(paste0(f_prefix, '_MAsmooth_after_rescaling.png'))
-plotSmoothMA(normalized_all_count_mat)
-dev.off()
 
 require(qvalue)
-# DIFFBIND WAY
+# DIFFBIND WAY (only works for replicates (group = 4))
 require(edgeR)
 res = DGEList(normalized_all_count_mat)
 res$samples$group = c(1,1,2,2)
-res$counts = round(res$counts) #remove warnings
-res = calcNormFactors(res,method="TMM")
+res$counts = round(res$counts) #method requires integers
+res = calcNormFactors(res,method="TMM") #possibly not needed
 res$design = model.matrix(~res$samples$group)
 res = estimateGLMCommonDisp(res,res$design)
 # when this is run without estimateGLMTrendedDisp called, it will 
 #  "squeeze tagwise dispersions towards common dispersion" edgeR 2.8.2
+# this means that when using plotBCV it wont show the trend line
 res = estimateGLMTagwiseDisp(res,res$design)  
 res$GLM = glmFit(res,res$design)
 res$LRT = glmLRT(res$GLM,2)
 #out = topTags(res$LRT n = nrow(normalized_all_count_mat)) #res$LRT$table stores all the fun stuff
 
-qv = qvalue(res$LRT$table$PValue)
-png(paste0(f_prefix, '_MAsmooth_after_rescaling_sig.png'))
-plotSmoothMA(normalized_all_count_mat, pvals=qv$qvalues)
+png(paste0(f_prefix, '_MAsmooth_after_rescaling.png'))
+#plotSmoothMA(normalized_all_count_mat)
+plotSmoothMA(res$LRT)
 dev.off()
 
-if(0) {
-# old way
+res$LRT$qv = qvalue(res$LRT$table$PValue)
+png(paste0(f_prefix, '_MAsmooth_after_rescaling_sig.png'))
+#plotSmoothMA(normalized_all_count_mat, pvals=res$LRT$qv$qvalues)
+plotSmoothMA(res$LRT, pvals=res$LRT$qv$qvalues)
+dev.off()
+
+# do the same thing for merged dataset
+colnames(common_merge_count_mat) = c(x_name, y_name)
+colnames(all_merge_count_mat) = c(x_name, y_name)
+normalized_all_merge_count_mat = normalizeMA(common_merge_count_mat+1, all_merge_count_mat+1, method="rlm")-1
+
+png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling.png'))
+plotSmoothMA(common_merge_count_mat)
+dev.off()
+
+png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all.png'))
+plotSmoothMA(all_merge_count_mat)
+dev.off()
+
+png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all_common.png'))
+plotSmoothMA(all_merge_count_mat, sel = table_merge_MA[,4] == "merged_common_peak")
+dev.off()
+
+
+#DIFFBIND
+resm = DGEList(normalized_all_merge_count_mat)
+resm$samples$group = c(1,1,2,2)
+resm$counts = round(resm$counts) #method requires integers
+resm = calcNormFactors(resm,method="TMM") #possibly not needed
+resm$design = model.matrix(~resm$samples$group)
+resm = estimateGLMCommonDisp(resm,resm$design)
+# estimateGLMCommonDisp() calculates logCPM abundance and common dispersion
+# logCPM is around log2(rowMeans(cpm(resm))) (did not look up exact calculation)
+resm = estimateGLMTagwiseDisp(resm,resm$design)  
+resm$GLM = glmFit(resm,resm$design)
+resm$LRT = glmLRT(resm$GLM,2)
+
+resm$LRT$qv = qvalue(resm$LRT$table$PValue)
+
+png(paste0(f_prefix, '_MAsmooth_merge_after_rescaling.png'))
+plotSmoothMA(resm$LRT)
+dev.off()
+
+png(paste0(f_prefix, '_MAsmooth_merge_after_rescaling_sig.png'))
+plotSmoothMA(resm$LRT, pvals=resm$LRT$qv$qvalues)
+dev.off()
+
+
+if(0) { # old way
 #M = as.matrix(log2((common_peak_count_read1+1)/(common_peak_count_read2+1)))
 #A = as.matrix(0.5*log2((common_peak_count_read1+1)*(common_peak_count_read2+1)))
 # old way rescaling
@@ -249,18 +357,20 @@ merge_M_rescaled = (log2_merge_common_peak_count_read1_rescaled - log2_merge_com
 merge_A_rescaled = (log2_merge_common_peak_count_read1_rescaled + log2_merge_common_peak_count_read2)/2;
 }
 
+#output (only works for replicates)
 
-table_MA[,5] = peak_count_read1a
-table_MA[,6] = peak_count_read1b
-table_MA[,7] = peak_count_read2a
-table_MA[,8] = peak_count_read2b
+table_MA[,5] = peak_count_read1a[,4]
+table_MA[,6] = peak_count_read1b[,4]
+table_MA[,7] = peak_count_read2a[,4]
+table_MA[,8] = peak_count_read2b[,4]
 table_MA[,9] = res$counts[,1]
 table_MA[,10] = res$counts[,2]
 table_MA[,11] = res$counts[,3]
 table_MA[,12] = res$counts[,4]
 table_MA[,13] = res$LRT$table$logFC
 table_MA[,14] = res$LRT$table$logCPM
-table_MA[,15] = -log10(qv$qvalues)
+table_MA[,15] = -log10(res$LRT$table$PValue)
+table_MA[,16] = -log10(res$LRT$qv$qvalues)
 
 colnames(table_MA)[1] = "chr"
 colnames(table_MA)[2] = "start"
@@ -270,41 +380,53 @@ colnames(table_MA)[5] = "#raw_read_1a"
 colnames(table_MA)[6] = "#raw_read_1b"
 colnames(table_MA)[7] = "#raw_read_2a"
 colnames(table_MA)[8] = "#raw_read_2b"
-colnames(table_MA)[9] = "#norm_read_1a"
-colnames(table_MA)[10] = "#norm_read_1b"
-colnames(table_MA)[11] = "#norm_read_2a"
-colnames(table_MA)[12] = "#norm_read_2b"
+colnames(table_MA)[9] = "#MAnorm_read_1a"
+colnames(table_MA)[10] = "#MAnorm_read_1b"
+colnames(table_MA)[11] = "#MAnorm_read_2a"
+colnames(table_MA)[12] = "#MAnorm_read_2b"
 colnames(table_MA)[13] = "logFC"
 colnames(table_MA)[14] = "logCPM"
-colnames(table_MA)[15] = "-log10(q-value)"
+colnames(table_MA)[15] = "-log10(p-value)"
+colnames(table_MA)[16] = "-log10(q-value)"
 
-write.table(table_MA,"MAnorm_result.xls",sep="\t",quote=FALSE,row.names=FALSE)
+write.table(table_MA, paste0(f_prefix,"_MAnorm_result.xls"), sep="\t", quote=FALSE, row.names=FALSE)
+#can adjusting make numnbers less than 0?
+#adjusting can boost 0s to non-0
+#careful about using qvalues package because diff pi0 can affect
+#look at distribution of pvalues
 
-if(0) { #not done yet
 # table_merge
-table_merge_MA[,5] = merge_common_peak_count_read1
-table_merge_MA[,6] = merge_common_peak_count_read2
-table_merge_MA[,7] = merge_M_rescaled
-table_merge_MA[,8] = merge_A_rescaled
-table_merge_MA =as.data.frame(table_merge_MA)
-table_merge_MA[,9] = 0
-log2_merge_common_peak_count_read1_rescaled = as.matrix(log2_merge_common_peak_count_read1_rescaled)
-merge_common_peak_count_read2 = as.matrix(merge_common_peak_count_read2)
-for (n in c(1:nrow(table_merge_MA))) {
-#        cat(n,'\t',round(2^log2_merge_common_peak_count_read1_rescaled[n]),'\t',merge_common_peak_count_read2[n],'\n')
-    table_merge_MA[n,9]=-log10(pval(round(2^(log2_merge_common_peak_count_read1_rescaled[n])),merge_common_peak_count_read2[n]))
-}
-
+table_merge_MA[,5] = merge_common_peak_count_read1a[,4]
+table_merge_MA[,6] = merge_common_peak_count_read1b[,4]
+table_merge_MA[,7] = merge_common_peak_count_read2a[,4]
+table_merge_MA[,8] = merge_common_peak_count_read2b[,4]
+table_merge_MA[,9] = resm$counts[,1]
+table_merge_MA[,10] = resm$counts[,2]
+table_merge_MA[,11] = resm$counts[,3]
+table_merge_MA[,12] = resm$counts[,4]
+table_merge_MA[,13] = resm$LRT$table$logFC
+table_merge_MA[,14] = resm$LRT$table$logCPM
+table_merge_MA[,15] = -log10(resm$LRT$table$PValue)
+table_merge_MA[,16] = -log10(resm$LRT$qv$qvalues)
 
 colnames(table_merge_MA)[1] = "chr"
 colnames(table_merge_MA)[2] = "start"
 colnames(table_merge_MA)[3] = "end"
 colnames(table_merge_MA)[4] = "description"
-colnames(table_merge_MA)[5] = "#raw_read_1"
-colnames(table_merge_MA)[6] = "#raw_read_2"
-colnames(table_merge_MA)[7] = "M_value_rescaled"
-colnames(table_merge_MA)[8] = "A_value_rescaled"
-colnames(table_merge_MA)[9] = "-log10(p-value)"
+colnames(table_merge_MA)[5] = "#raw_read_1a"
+colnames(table_merge_MA)[6] = "#raw_read_1b"
+colnames(table_merge_MA)[7] = "#raw_read_2a"
+colnames(table_merge_MA)[8] = "#raw_read_2b"
+colnames(table_merge_MA)[9] = "#MAnorm_read_1a"
+colnames(table_merge_MA)[10] = "#MAnorm_read_1b"
+colnames(table_merge_MA)[11] = "#MAnorm_read_2a"
+colnames(table_merge_MA)[12] = "#MAnorm_read_2b"
+colnames(table_merge_MA)[13] = "logFC"
+colnames(table_merge_MA)[14] = "logCPM"
+colnames(table_merge_MA)[15] = "-log10(p-value)"
+colnames(table_merge_MA)[16] = "-log10(q-value)"
 
 write.table(table_merge_MA,"MAnorm_result_commonPeak_merged.xls",sep="\t",quote=FALSE,row.names=FALSE)
-}
+
+rm(table_MA, table_merge_MA)
+source("../edgeRmatricies.R")
