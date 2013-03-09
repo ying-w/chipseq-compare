@@ -6,6 +6,9 @@
 # https://hedgehog.fhcrc.org/bioconductor/trunk/madman/Rpacks/affy/R/normalize.loess.R
 normalizeMA = function(subset_mat, full_mat, method="loess", log.it=TRUE)
 {
+    # method can be either loess (NOT loWess) or rlm
+
+    #parameters from normalize.loess.R that I've modified/excluded
     # subsample=sample(1:(dim(mat)[1]), min(c(5000, nrow(mat)))),
     subsample = 1:nrow(subset_mat)
     epsilon = 10^-2
@@ -38,7 +41,7 @@ normalizeMA = function(subset_mat, full_mat, method="loess", log.it=TRUE)
                 index = c(order(A)[1], subsample, order(-A)[1])
                 M_subset = M[index]
                 A_subset = A[index]
-                if(method == "loewss") {
+                if(method == "loess") {
                     span=2/3
                     family.loess="symmetric"
                     aux = loess(M_subset ~ A_subset, span=span, degree=1, weights=w, family=family.loess)
@@ -48,6 +51,17 @@ normalizeMA = function(subset_mat, full_mat, method="loess", log.it=TRUE)
                 } else {
                     stop("Invalid method specified")
                 }
+                # plot(A_subset, M_subset)
+                ## for rlm
+                # abline(aux$coefficients)
+                ## for loess
+                # M_subset_rescale = predict(aux, data.frame(M_subset))
+                # lines(A_subset, M_subset_rescale)
+                ## plot changes
+                # pp = predict(aux, data.frame(A_subset = A_subset))
+                # plot(A_subset, M_subset); abline(aux$coefficients)#; lines(A_subset, pp)
+                # plot(A_subset, M_subset-pp); abline(aux$coefficients); abline(h=0, col="blue")
+                
                 #colname of data frame below must match
                 aux = predict(aux, data.frame(A_subset = (full_mat[,j] + full_mat[,k]) / 2)) / J
                 means[, j] = means[, j] + aux
@@ -108,7 +122,7 @@ extractTitle = function(titles, numsplit = 2) {
 # mergeReps can be append or add, c("append", "add")
 # use sel to obtain subset (say fdr cutoff)
 plotSmoothMA = function(mat, pvals = NULL, pval_cut = 0.01, plotfun = smoothScatter, 
-    mergeReps = "append", sel=rep(FALSE, nrow(mat)), myTitle = NULL) {
+    mergeReps = "append", sel=rep(FALSE, nrow(mat)), myTitle = NULL, prefix = "TF") {
     #takes UNlogged mat
     if(class(mat) == "DGELRT") {
         M = mat$table$logFC
@@ -141,17 +155,17 @@ plotSmoothMA = function(mat, pvals = NULL, pval_cut = 0.01, plotfun = smoothScat
         
     } else { stop("Unknown matrix type") }
 
-    # todo: sel calculation below is wrong, if reps then sel is expanded to fill
+    # careful: sel calculation are scaled, if reps then sel is expanded to fill
     if(all(sel == FALSE) && !is.null(pvals)) {
         sel = pvals < pval_cut
         myTitle = sprintf('%s Binding Affinity: %s vs %s (%s of %s w/%s < %1.3f)',
-            'TF', expr_name[1], expr_name[2], sum(sel), length(A), "pval", pval_cut)
+            prefix, expr_name[1], expr_name[2], sum(sel)*(length(sel)/length(A)), length(A), "pval", pval_cut)
     } else if (sum(sel) > 0) {
         myTitle = sprintf('%s Binding Affinity: %s vs %s (%s of %s highlighted)',
-            'TF', expr_name[1], expr_name[2], sum(sel), length(A))
+            prefix, expr_name[1], expr_name[2], sum(sel)*(length(sel)/length(A)), length(A))
     } else {
         myTitle = sprintf('%s Binding Affinity: %s vs %s (%s sites)',
-            'TF', expr_name[1], expr_name[2], length(A))
+            prefix, expr_name[1], expr_name[2], length(A))
     }
     if(identical(plotfun, smoothScatter)) { #use identical() not ==
         plotfun(A, M, pch = 20, cex = 0.33, xlim = c(0, ceiling(max(A))),
@@ -168,6 +182,11 @@ plotSmoothMA = function(mat, pvals = NULL, pval_cut = 0.01, plotfun = smoothScat
 
     abline(h=0,col='dodgerblue')
     points(A[sel], M[sel], pch=20, cex=0.33, col=2) #highlight significant
+    # (length(sel)/length(A)) is for scaling
+    message(sum(sel)*(length(sel)/length(A)), "/", length(A), " or about ",
+    round(sum(sel)*(length(sel)/length(A))/length(A)*100, 3), " % highlighted")
+    
+    invisible(cbind(A, M))
 }
 
 #####################################################################################################
@@ -225,6 +244,7 @@ table_merge_MA = read.table("tmp_MAnorm_merge.bed",header=FALSE)
 # pretty always returns a 2+5 vector
 #smoothScatter(A,M,cex=1,main="MA plot before rescaling (common peaks)",  xlim=pretty(A)[c(1, 7)])
 
+# name of files from name of folder (something like /protein_condition1_condition2)
 f_path = strsplit(getwd(), "_")[[1]]
 f_prefix = strsplit(getwd(), "/")[[1]]
 f_prefix = f_prefix[length(f_prefix)]
@@ -235,28 +255,52 @@ if(length(f_path) > 2)
 }
 colnames(all_count_mat) = c(x_name, y_name)
 colnames(common_count_mat) = c(x_name, y_name)
+
+# MAnorm rescaling by subtracting MA adjustment
 normalized_all_count_mat = normalizeMA(common_count_mat+1, all_count_mat+1, method="rlm")-1
 #subset_mat = common_count_mat+1; full_mat = all_count_mat+1 #DEBUG
 
+# MAplot before rescaling smoothed
 png(paste0(f_prefix, '_MAsmooth_before_rescaling.png'))
 plotSmoothMA(common_count_mat)
 dev.off()
 
+# MAplot before rescaling as dots (not smoothed)
+png(paste0(f_prefix, '_MAsmooth_before_rescaling_dots.png'))
+plotSmoothMA(common_count_mat, plotfun=plot)
+dev.off()
+
+# If you want to see the real line that is used:
+png(paste0(f_prefix, '_MAsmooth_before_rescaling_dots_MAline.png'))
+A_tmp = rowMeans(cbind(c(log2(all_count_mat[,1]+1), log2(all_count_mat[,2]+1)),
+ c(log2(all_count_mat[,3]+1), log2(all_count_mat[,4]+1))))
+offset_mat2 = log2(all_count_mat+1) - log2(normalized_all_count_mat+1)
+M_tmp = c(offset_mat2[,1]-offset_mat2[,3], offset_mat2[,2]-offset_mat2[,4])
+plotSmoothMA(common_count_mat, plotfun=plot)
+points(A_tmp, M_tmp, pch=20, cex=0.2, col="blue")
+dev.off()
+
+# MAplot before rescaling (all peaks, above were common only)
 png(paste0(f_prefix, '_MAsmooth_before_rescaling_all.png'))
 plotSmoothMA(all_count_mat)
 dev.off()
 
+# MAplot before rescaling w/common highlighted (all peaks)
 png(paste0(f_prefix, '_MAsmooth_before_rescaling_all_common.png'))
 plotSmoothMA(all_count_mat, sel = table_MA[,4] == "common_peak1" | table_MA[,4] == "common_peak2")
 dev.off()
 
+# MAplot before rescaling w/MA line (all peaks)
+png(paste0(f_prefix, '_MAsmooth_before_rescaling_all_dots_MAline.png'))
+plotSmoothMA(all_count_mat, plotfun=plot)
+points(A_tmp, M_tmp, pch=20, cex=0.2, col="blue")
+dev.off()
 
-
-require(qvalue)
+# Differential call using edgeR and normalized count matrix (subtract MA adjustment)
 # DIFFBIND WAY (only works for replicates (group = 4))
 require(edgeR)
 res = DGEList(normalized_all_count_mat)
-res$samples$group = c(1,1,2,2)
+res$samples$group = c(1,1,0,0)
 res$counts = round(res$counts) #method requires integers
 res = calcNormFactors(res,method="TMM") #possibly not needed
 res$design = model.matrix(~res$samples$group)
@@ -274,19 +318,49 @@ png(paste0(f_prefix, '_MAsmooth_after_rescaling.png'))
 plotSmoothMA(res$LRT)
 dev.off()
 
+require(qvalue)
 res$LRT$qv = qvalue(res$LRT$table$PValue)
+summary(res$LRT$qv)
+png(paste0(f_prefix, '_hist_pval.png'))
+hist(res$LRT$table$PValue, breaks=100, main=paste("Pval distribution, pi0 =", 
+    round(res$LRT$qv$pi0,3)), xlab="Pvalues calculated by edgeR")
+dev.off()
+
+png(paste0(f_prefix, '_hist_pval.png'))
+hist(res$LRT$table$PValue, breaks=100, main=paste("Pval distribution, pi0 =", 
+    round(res$LRT$qv$pi0,3)), xlab="Pvalues calculated by edgeR")
+dev.off()
+
+#MAplots after rescale
 png(paste0(f_prefix, '_MAsmooth_after_rescaling_sig.png'))
 #plotSmoothMA(normalized_all_count_mat, pvals=res$LRT$qv$qvalues)
 plotSmoothMA(res$LRT, pvals=res$LRT$qv$qvalues)
 dev.off()
 
-# do the same thing for merged dataset
+png(paste0(f_prefix, '_MAsmooth_after_rescaling_sig_dots.png'))
+plotSmoothMA(res$LRT, pvals=res$LRT$qv$qvalues, plotfun=plot)
+dev.off()
+
+################# do the same thing for merged dataset
 colnames(common_merge_count_mat) = c(x_name, y_name)
 colnames(all_merge_count_mat) = c(x_name, y_name)
 normalized_all_merge_count_mat = normalizeMA(common_merge_count_mat+1, all_merge_count_mat+1, method="rlm")-1
 
 png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling.png'))
 plotSmoothMA(common_merge_count_mat)
+dev.off()
+
+png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_dots.png'))
+plotSmoothMA(common_merge_count_mat, plotfun=plot)
+dev.off()
+
+png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_dots_MAline.png'))
+A_tmp = rowMeans(cbind(c(log2(all_merge_count_mat[,1]+1), log2(all_merge_count_mat[,2]+1)),
+ c(log2(all_merge_count_mat[,3]+1), log2(all_merge_count_mat[,4]+1))))
+offset_mat2 = log2(all_merge_count_mat+1) - log2(normalized_all_merge_count_mat+1)
+M_tmp = c(offset_mat2[,1]-offset_mat2[,3], offset_mat2[,2]-offset_mat2[,4])
+plotSmoothMA(common_merge_count_mat, plotfun=plot)
+points(A_tmp, M_tmp, pch=20, cex=0.2, col="blue")
 dev.off()
 
 png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all.png'))
@@ -297,10 +371,14 @@ png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all_common.png'))
 plotSmoothMA(all_merge_count_mat, sel = table_merge_MA[,4] == "merged_common_peak")
 dev.off()
 
+png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all_dots_MAline.png'))
+plotSmoothMA(all_merge_count_mat, plotfun=plot)
+points(A_tmp, M_tmp, pch=20, cex=0.2, col="blue")
+dev.off()
 
 #DIFFBIND
 resm = DGEList(normalized_all_merge_count_mat)
-resm$samples$group = c(1,1,2,2)
+resm$samples$group = c(1,1,0,0)
 resm$counts = round(resm$counts) #method requires integers
 resm = calcNormFactors(resm,method="TMM") #possibly not needed
 resm$design = model.matrix(~resm$samples$group)
@@ -312,6 +390,11 @@ resm$GLM = glmFit(resm,resm$design)
 resm$LRT = glmLRT(resm$GLM,2)
 
 resm$LRT$qv = qvalue(resm$LRT$table$PValue)
+summary(resm$LRT$qv)
+png(paste0(f_prefix, '_hist_pval_merged.png'))
+hist(resm$LRT$table$PValue, breaks=100, main=paste("Pval distribution (merged overlap), pi0 =", 
+    round(resm$LRT$qv$pi0,3)), xlab="Pvalues calculated by edgeR")
+dev.off()
 
 png(paste0(f_prefix, '_MAsmooth_merge_after_rescaling.png'))
 plotSmoothMA(resm$LRT)
@@ -426,7 +509,7 @@ colnames(table_merge_MA)[14] = "logCPM"
 colnames(table_merge_MA)[15] = "-log10(p-value)"
 colnames(table_merge_MA)[16] = "-log10(q-value)"
 
-write.table(table_merge_MA,"MAnorm_result_commonPeak_merged.xls",sep="\t",quote=FALSE,row.names=FALSE)
+write.table(table_merge_MA, paste0(f_prefix,"_MAnorm_result.xls"), sep="\t", quote=FALSE, row.names=FALSE)
 
 rm(table_MA, table_merge_MA)
-source("../edgeRmatricies.R")
+# source("../edgeRmatricies.R") #for additional figures / comparison of normalization
