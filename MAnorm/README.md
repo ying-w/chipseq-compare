@@ -61,4 +61,5 @@ MAnorm3.sh peaks_folder \
 ```
       
 Where 60 70 55 53 correspond to shift lengths (half of estimated fragment length) for `readsA1.bed readsA2.bed readsB1.bed readsB2.bed` 
-and `readsA1` and `readsA2` are replicates used to identify peaks in `peaksA`. You must have MAnorm3.R and MAnorm3.sh in your {PATH}
+and `readsA1` and `readsA2` are replicates used to identify peaks in `peaksA`. You must have MAnorm3.sh in your `$PATH` and MAnorm3.R must
+be in the upper level directory (you could modify the call in MAnorm3.sh)

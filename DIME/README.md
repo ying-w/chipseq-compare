@@ -42,3 +42,6 @@ save(hn1.d1, file="./data/vs_exprA_exprB_500_chr1-diff")
 But I must have messed up somewhere because even running a smaller chromosome I was hitting the max Wall time and not being able to finish running DIME
 
 :(
+
+## Future direction
+If I have some downtime in the future, I might cut out certain regions (peaks) or make the big size larger or take possible half a chromosome but for now I will investigate other techniques.
