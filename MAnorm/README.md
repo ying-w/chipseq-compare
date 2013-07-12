@@ -1,5 +1,5 @@
-MAnorm {WIP}
-============
+MAnorm
+======
 My modified/improved version for testing.
 
 Original can be found [here](http://bcb.dfci.harvard.edu/~gcyuan/MAnorm/R_tutorial.html) 
@@ -9,7 +9,7 @@ Problems with MAnorm
 --------------------
 * There is something wrong with how the p-values are calculated (see code in MAnorm2.R for details). 
   * pval calculation is not optimized (very slow)
-    * It is faster to use choose() and run in parallel
+    * It is faster to use `choose()` and run in parallel
   * Stirling approximation seems to be [done incorrectly](http://stats.stackexchange.com/questions/47997/unknown-p-value-calculation)
     * This calculation is consistant in matlab file (more details in matlab file than R file)
   * pval are not symmetric (calculations from x/y do not give the same pvalues as y/x)
@@ -29,8 +29,8 @@ This version uses [edgeR](http://www.bioconductor.org/packages/release/bioc/html
 Todo
 ----
 * Contact MAnorm author about some of the issues in p-value calculation and merging
-* Add switch for gzip
 * Add error checks and helpeful diagnostic messages
+* Add switch to check for .gz ending
 
 Changes in v2
 -------------
@@ -48,7 +48,7 @@ Experience from running on a quad core workstation with 32gb of ram:
 v2 will retain the same input/output as the original script (from supplement of paper) but will be faster
 v3 will have different input/output options but the same methods will be applied
 
-Example of MAnorm3 run:
+# Example of MAnorm3 run:
 ```bash
 MAnorm3.sh peaks_folder \
   peaksA.bed.gz \
@@ -60,6 +60,6 @@ MAnorm3.sh peaks_folder \
   60 70 55 53
 ```
       
-Where 60 70 55 53 correspond to shift lengths (half of estimated fragment length) for `readsA1.bed readsA2.bed readsB1.bed readsB2.bed` 
+Where `60` `70` `55` `53` correspond to shift lengths (half of estimated fragment length) for `readsA1.bed` `readsA2.bed` `readsB1.bed` `readsB2.bed` 
 and `readsA1` and `readsA2` are replicates used to identify peaks in `peaksA`. You must have MAnorm3.sh in your `$PATH` and MAnorm3.R must
 be in the upper level directory (you could modify the call in MAnorm3.sh)

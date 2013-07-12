@@ -2,9 +2,10 @@
 
 Sorry this directory is currently a mess.
 
-There is some code here to preprocess data in such a way that [DIME](http://www.stat.osu.edu/~statgen/SOFTWARE/DIME/) can be used.
+Here is some code to preprocess data for [DIME](http://www.stat.osu.edu/~statgen/SOFTWARE/DIME/).
+Their 2011 Bioinformatics paper can be found [here](http://pubmed.gov/21471015).
 
-The author (C. Taslim) was kind enough to send me some matlab code to do the loess normalization (used for input into DIME).
+The author (C. Taslim) was kind enough to send me some matlab code to do the loess normalization used as input for DIME.
 The matlab code can is in the following 3 files:
 
     normalizeMeanVarStep1.m
@@ -17,14 +18,15 @@ If memory serves me correctly, I then made non-overlapping bins over an entire c
 
 ```bash
 perl covBEDforDIME.pl chromsizes19M.tab > 500bp_window.bed &
-#each takes about 6min, do not run in parallel (disk bound, splits into multiple processes)
+
 intersectBed -v -abam ../experimentA1.bam -b ../artifact2.bed | coverageBed -abam stdin -b 500bp_window.bed | sortBed > ./data/exprA1.cov 
 intersectBed -v -abam ../experimentA2.bam -b ../artifact2.bed | coverageBed -abam stdin -b 500bp_window.bed | sortBed > ./data/exprA2.cov 
 intersectBed -v -abam ../experimentB1.bam -b ../artifact2.bed | coverageBed -abam stdin -b 500bp_window.bed | sortBed > ./data/exprB1.cov
 intersectBed -v -abam ../experimentB2.bam -b ../artifact2.bed | coverageBed -abam stdin -b 500bp_window.bed | sortBed > ./data/exprB2.cov
 ```
-Where `chromsizes19M.tab` is a two colum file of chromosome names in the first column and chromosome sizes in the second column and 
-`artifact2.bed` is merged file containing DAC Blacklisted Regions and Duke Excluded Regions from ENCODE project. 
+`chromsizes19M.tab` is a two colum file of chromosome names in the first column and chromosome sizes in the second column
+ 
+`artifact2.bed` is merged file containing DAC Blacklisted Regions and Duke Excluded Regions from ENCODE project
 
 I then split up the file the coverage files by chromosome using `splitcov.pl` and tried run `loess.R` and then run DIME using something like:
 
@@ -43,5 +45,16 @@ But I must have messed up somewhere because even running a smaller chromosome I 
 
 :(
 
+Here is a couple of lines from the `vs_exprA_exprB_chr1` file:
+
+    1.33995979450539
+    1.23717107628172
+    0
+    -1.33995979450539
+    3.50775704404255
+    1.90947995192546
+    0
+    0
+
 ## Future direction
-If I have some downtime in the future, I might cut out certain regions (peaks) or make the big size larger or take possible half a chromosome but for now I will investigate other techniques.
+If I have some time in the future, I might cut out certain regions (peaks) or make the big size larger or take possible half a chromosome but for now I will investigate other techniques.
