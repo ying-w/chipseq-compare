@@ -95,7 +95,7 @@ pval3 <- function(x, y){
 	pvalue = choose(x+y,x) * 2^-(x+y+1) #p1/p2 seem redundant (give the same answer)
 	#WARNING: >20 case is not always a good approximation, ex: 12,12
 	#WARNING: if x + y > 800 there is chance of Inf for answer
-} #~0.02 order of magnitude faster but gives a diff answer
+} #~0.02s an order of magnitude faster but gives a diff answer
 
 #log pval not symmetric - this is ok
 

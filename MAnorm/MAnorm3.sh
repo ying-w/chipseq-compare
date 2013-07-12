@@ -249,7 +249,7 @@ cd ./$fname/
 #R --no-restore --save < ../MAnorm2.r ${1}_Rcommand.out 
 #doesnt load .R that might slow things down but still loads usr+global env 
 #doesnt redirect nicely
-R CMD BATCH ../MAnorm3.r ${1}_Rcommand.out 
+R CMD BATCH ../MAnorm3.R ${1}_Rcommand.out 
 #echo "R CURRENTLY DISABLED!!!"
 cd ..
 
