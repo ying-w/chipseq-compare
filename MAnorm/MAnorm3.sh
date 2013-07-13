@@ -9,6 +9,13 @@
 # read1_dump.bed: sample 1 read NOT used for mapping to peaks
 # read2_dump.bed: sample 2 read NOT used for mapping to peaks
 #####################################################################################################
+# quick error check
+if [[ $(ls -A tmp* ) ]] 
+then
+    echo "Please remove all tmp files before continuing"
+    return 1
+fi
+
 #dump and shift reads from bed (except chrM and *random*)
 if [ $# -eq 7 ]
 then
@@ -19,7 +26,7 @@ then
     echo `date` >> ./$fname/${1}.log    
 	echo "StepI: clean input"
     #newlines do not work in echo by default, must use echo -e which is not POSIX
-    options="$4 shift: $6 $5 shift: $7"  
+    options="$4 shift: $6\n$5 shift: $7"  
     printf "%b\n" "$options" >> ./$fname/${1}.log # http://wiki.bash-hackers.org/commands/builtin/printf
 	#global variables must passed into awk using -v
 	zcat $2 | sed 's/\s$//g' | awk -v fname="$fname" 'BEGIN {OFS="\t"}
@@ -262,4 +269,10 @@ cd ..
 #####################################################################################################
 #cleanup
 #echo "CLEANUP DISABLED"
-rm ./$fname/tmp_*
+if [[ $(ls -A ./$fname/*xls ) ]] 
+then
+    rm ./$fname/tmp_*
+else
+    echo "MAnorm3.R did not create excel output file check ${fname}_Rcommand.out"
+    return 1
+fi

@@ -25,6 +25,7 @@ This version uses [edgeR](http://www.bioconductor.org/packages/release/bioc/html
 * MA adjustment is included as an offset to edgeR model
 * sortBed before mergeBed command so the merged dataset is actually merged
 * Requires input to be gzipped (will add switch for this later)
+* Outputs a bunch of plots
 
 Todo
 ----
@@ -45,8 +46,9 @@ Experience from running on a quad core workstation with 32gb of ram:
 * StepII & StepIII is CPU bound (lots of parallel bedtools)
 * Ram usage I've seen with ENCODE datasets is 20gb+/-5gb but I dont actually think all of this is used for processing
 
-v2 will retain the same input/output as the original script (from supplement of paper) but will be faster
-v3 will have different input/output options but the same methods will be applied
+MAnorm - original
+MAnorm2 - v2 retains input/output compatibility w/original but will be faster and allow for replicates
+MAnorm3 - v3 has different input/output options but MA methods will be applied
 
 # Example of MAnorm3 run:
 ```bash
@@ -62,4 +64,4 @@ MAnorm3.sh peaks_folder \
       
 Where `60` `70` `55` `53` correspond to shift lengths (half of estimated fragment length) for `readsA1.bed` `readsA2.bed` `readsB1.bed` `readsB2.bed` 
 and `readsA1` and `readsA2` are replicates used to identify peaks in `peaksA`. You must have MAnorm3.sh in your `$PATH` and MAnorm3.R must
-be in the upper level directory (you could modify the call in MAnorm3.sh)
+be in current working directory (you could modify this in MAnorm3.sh). 

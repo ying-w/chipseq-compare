@@ -7,6 +7,7 @@
 normalizeMA = function(subset_mat, full_mat, method="loess", log.it=TRUE)
 {
     # method can be either loess (NOT loWess) or rlm
+    # should not return anything < 0 or else edgeR wont work
 
     #parameters from normalize.loess.R that I've modified/excluded
     # subsample=sample(1:(dim(mat)[1]), min(c(5000, nrow(mat)))),
@@ -298,13 +299,18 @@ dev.off()
 
 # Differential call using edgeR and normalized count matrix (subtract MA adjustment)
 # DIFFBIND WAY (only works for replicates (group = 4))
+# does not work as well as using offset matrix (see below)
+if(0) {
 require(edgeR)
+normalized_all_count_mat[normalized_all_count_mat < 0] = 0
 res = DGEList(normalized_all_count_mat)
-res$samples$group = c(1,1,0,0)
+res$samples$group = c(0,0,1,1)
 res$counts = round(res$counts) #method requires integers
 res = calcNormFactors(res,method="TMM") #possibly not needed
 res$design = model.matrix(~res$samples$group)
 res = estimateGLMCommonDisp(res,res$design)
+# estimateGLMCommonDisp() calculates logCPM abundance and common dispersion
+# logCPM is approx log2(rowMeans(cpm(resm))) (did not look up exact calculation)
 # when this is run without estimateGLMTrendedDisp called, it will 
 #  "squeeze tagwise dispersions towards common dispersion" edgeR 2.8.2
 # this means that when using plotBCV it wont show the trend line
@@ -312,49 +318,64 @@ res = estimateGLMTagwiseDisp(res,res$design)
 res$GLM = glmFit(res,res$design)
 res$LRT = glmLRT(res$GLM,2)
 #out = topTags(res$LRT n = nrow(normalized_all_count_mat)) #res$LRT$table stores all the fun stuff
+}
 
-png(paste0(f_prefix, '_MAsmooth_after_rescaling.png'))
+require(edgeR)
+# Differential call using edgeR and normalized count matrix (offset matrix)
+res = DGEList(all_count_mat, group = c(0,0,1,1))
+offset_mat = log(all_count_mat+1) - log(normalized_all_count_mat+1)
+# standardize offset matrix: https://stat.ethz.ch/pipermail/bioconductor/2013-March/051680.html
+avgloglibsize = mean(log(res$samples$lib.size))
+offset_mat = offset_mat - mean(offset_mat) + avgloglibsize
+#no TMM
+res$design = model.matrix(~res$samples$group)
+res = estimateGLMCommonDisp(res, res$design, offset = offset_mat)
+res = estimateGLMTagwiseDisp(res, res$design, offset = offset_mat) #not sure if this should be included
+#no trended
+GLM = glmFit(res,res$design, offset = offset_mat); LRT = glmLRT(GLM,2)
+
+png(paste0(f_prefix, '_MAsmooth_after_rescaling.png'), width=3000, height=3000, res=300)
 #plotSmoothMA(normalized_all_count_mat)
-plotSmoothMA(res$LRT)
+plotSmoothMA(LRT)
 dev.off()
 
 require(qvalue)
-res$LRT$qv = qvalue(res$LRT$table$PValue)
-summary(res$LRT$qv)
-png(paste0(f_prefix, '_hist_pval.png'))
-hist(res$LRT$table$PValue, breaks=100, main=paste("Pval distribution, pi0 =", 
-    round(res$LRT$qv$pi0,3)), xlab="Pvalues calculated by edgeR")
+LRT$qv = qvalue(LRT$table$PValue)
+summary(LRT$qv)
+png(paste0(f_prefix, '_hist_pval.png'), width=3000, height=3000, res=300)
+hist(LRT$table$PValue, breaks=100, main=paste("Pval distribution, pi0 =", 
+    round(LRT$qv$pi0,3)), xlab="Pvalues calculated by edgeR")
 dev.off()
 
-png(paste0(f_prefix, '_hist_pval.png'))
-hist(res$LRT$table$PValue, breaks=100, main=paste("Pval distribution, pi0 =", 
-    round(res$LRT$qv$pi0,3)), xlab="Pvalues calculated by edgeR")
+png(paste0(f_prefix, '_hist_pval.png'), width=3000, height=3000, res=300)
+hist(LRT$table$PValue, breaks=100, main=paste("Pval distribution, pi0 =", 
+    round(LRT$qv$pi0,3)), xlab="Pvalues calculated by edgeR")
 dev.off()
 
 #MAplots after rescale
-png(paste0(f_prefix, '_MAsmooth_after_rescaling_sig.png'))
-#plotSmoothMA(normalized_all_count_mat, pvals=res$LRT$qv$qvalues)
-plotSmoothMA(res$LRT, pvals=res$LRT$qv$qvalues)
+png(paste0(f_prefix, '_MAsmooth_after_rescaling_sig.png'), width=3000, height=3000, res=300)
+#plotSmoothMA(normalized_all_count_mat, pvals=LRT$qv$qvalues)
+plotSmoothMA(LRT, pvals=LRT$qv$qvalues)
 dev.off()
 
-png(paste0(f_prefix, '_MAsmooth_after_rescaling_sig_dots.png'))
-plotSmoothMA(res$LRT, pvals=res$LRT$qv$qvalues, plotfun=plot)
+png(paste0(f_prefix, '_MAsmooth_after_rescaling_sig_dots.png'), width=3000, height=3000, res=300)
+plotSmoothMA(LRT, pvals=LRT$qv$qvalues, plotfun=plot)
 dev.off()
 
-################# do the same thing for merged dataset
+################# do the same for merged dataset
 colnames(common_merge_count_mat) = c(x_name, y_name)
 colnames(all_merge_count_mat) = c(x_name, y_name)
 normalized_all_merge_count_mat = normalizeMA(common_merge_count_mat+1, all_merge_count_mat+1, method="rlm")-1
 
-png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling.png'))
+png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling.png'), width=3000, height=3000, res=300)
 plotSmoothMA(common_merge_count_mat)
 dev.off()
 
-png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_dots.png'))
+png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_dots.png'), width=3000, height=3000, res=300)
 plotSmoothMA(common_merge_count_mat, plotfun=plot)
 dev.off()
 
-png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_dots_MAline.png'))
+png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_dots_MAline.png'), width=3000, height=3000, res=300)
 A_tmp = rowMeans(cbind(c(log2(all_merge_count_mat[,1]+1), log2(all_merge_count_mat[,2]+1)),
  c(log2(all_merge_count_mat[,3]+1), log2(all_merge_count_mat[,4]+1))))
 offset_mat2 = log2(all_merge_count_mat+1) - log2(normalized_all_merge_count_mat+1)
@@ -363,49 +384,48 @@ plotSmoothMA(common_merge_count_mat, plotfun=plot)
 points(A_tmp, M_tmp, pch=20, cex=0.2, col="blue")
 dev.off()
 
-png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all.png'))
+png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all.png'), width=3000, height=3000, res=300)
 plotSmoothMA(all_merge_count_mat)
 dev.off()
 
-png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all_common.png'))
+png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all_common.png'), width=3000, height=3000, res=300)
 plotSmoothMA(all_merge_count_mat, sel = table_merge_MA[,4] == "merged_common_peak")
 dev.off()
 
-png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all_dots_MAline.png'))
+png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all_dots_MAline.png'), width=3000, height=3000, res=300)
 plotSmoothMA(all_merge_count_mat, plotfun=plot)
 points(A_tmp, M_tmp, pch=20, cex=0.2, col="blue")
 dev.off()
 
-#DIFFBIND
-resm = DGEList(normalized_all_merge_count_mat)
-resm$samples$group = c(1,1,0,0)
-resm$counts = round(resm$counts) #method requires integers
-resm = calcNormFactors(resm,method="TMM") #possibly not needed
+#Using offsets
+resm = DGEList(all_merge_count_mat, group = c(0,0,1,1))
+offset_mat2 = log(all_merge_count_mat+1) - log(normalized_all_merge_count_mat+1)
+avgloglibsize = mean(log(resm$samples$lib.size))
+offset_mat2 = offset_mat2 - mean(offset_mat2) + avgloglibsize
+#no TMM
 resm$design = model.matrix(~resm$samples$group)
 resm = estimateGLMCommonDisp(resm,resm$design)
-# estimateGLMCommonDisp() calculates logCPM abundance and common dispersion
-# logCPM is around log2(rowMeans(cpm(resm))) (did not look up exact calculation)
 resm = estimateGLMTagwiseDisp(resm,resm$design)  
-resm$GLM = glmFit(resm,resm$design)
-resm$LRT = glmLRT(resm$GLM,2)
+GLMm = glmFit(resm,resm$design, offset = offset_mat2)
+LRTm = glmLRT(GLMm,2)
 
-resm$LRT$qv = qvalue(resm$LRT$table$PValue)
-summary(resm$LRT$qv)
-png(paste0(f_prefix, '_hist_pval_merged.png'))
-hist(resm$LRT$table$PValue, breaks=100, main=paste("Pval distribution (merged overlap), pi0 =", 
-    round(resm$LRT$qv$pi0,3)), xlab="Pvalues calculated by edgeR")
+LRTm$qv = qvalue(LRTm$table$PValue)
+summary(LRTm$qv)
+png(paste0(f_prefix, '_hist_pval_merged.png'), width=3000, height=3000, res=300)
+hist(LRTm$table$PValue, breaks=100, main=paste("Pval distribution (merged overlap), pi0 =", 
+    round(LRTm$qv$pi0,3)), xlab="Pvalues calculated by edgeR")
 dev.off()
 
-png(paste0(f_prefix, '_MAsmooth_merge_after_rescaling.png'))
-plotSmoothMA(resm$LRT)
+png(paste0(f_prefix, '_MAsmooth_merge_after_rescaling.png'), width=3000, height=3000, res=300)
+plotSmoothMA(LRTm)
 dev.off()
 
-png(paste0(f_prefix, '_MAsmooth_merge_after_rescaling_sig.png'))
-plotSmoothMA(resm$LRT, pvals=resm$LRT$qv$qvalues)
+png(paste0(f_prefix, '_MAsmooth_merge_after_rescaling_sig.png'), width=3000, height=3000, res=300)
+plotSmoothMA(LRTm, pvals=LRTm$qv$qvalues)
 dev.off()
 
 
-if(0) { # old way
+if(0) { # old way for reference
 #M = as.matrix(log2((common_peak_count_read1+1)/(common_peak_count_read2+1)))
 #A = as.matrix(0.5*log2((common_peak_count_read1+1)*(common_peak_count_read2+1)))
 # old way rescaling
@@ -450,10 +470,10 @@ table_MA[,9] = res$counts[,1]
 table_MA[,10] = res$counts[,2]
 table_MA[,11] = res$counts[,3]
 table_MA[,12] = res$counts[,4]
-table_MA[,13] = res$LRT$table$logFC
-table_MA[,14] = res$LRT$table$logCPM
-table_MA[,15] = -log10(res$LRT$table$PValue)
-table_MA[,16] = -log10(res$LRT$qv$qvalues)
+table_MA[,13] = LRT$table$logFC
+table_MA[,14] = LRT$table$logCPM
+table_MA[,15] = -log10(LRT$table$PValue)
+table_MA[,16] = -log10(LRT$qv$qvalues)
 
 colnames(table_MA)[1] = "chr"
 colnames(table_MA)[2] = "start"
@@ -487,10 +507,10 @@ table_merge_MA[,9] = resm$counts[,1]
 table_merge_MA[,10] = resm$counts[,2]
 table_merge_MA[,11] = resm$counts[,3]
 table_merge_MA[,12] = resm$counts[,4]
-table_merge_MA[,13] = resm$LRT$table$logFC
-table_merge_MA[,14] = resm$LRT$table$logCPM
-table_merge_MA[,15] = -log10(resm$LRT$table$PValue)
-table_merge_MA[,16] = -log10(resm$LRT$qv$qvalues)
+table_merge_MA[,13] = LRTm$table$logFC
+table_merge_MA[,14] = LRTm$table$logCPM
+table_merge_MA[,15] = -log10(LRTm$table$PValue)
+table_merge_MA[,16] = -log10(LRTm$qv$qvalues)
 
 colnames(table_merge_MA)[1] = "chr"
 colnames(table_merge_MA)[2] = "start"
@@ -509,7 +529,7 @@ colnames(table_merge_MA)[14] = "logCPM"
 colnames(table_merge_MA)[15] = "-log10(p-value)"
 colnames(table_merge_MA)[16] = "-log10(q-value)"
 
-write.table(table_merge_MA, paste0(f_prefix,"_MAnorm_result.xls"), sep="\t", quote=FALSE, row.names=FALSE)
+write.table(table_merge_MA, paste0(f_prefix,"_MAnorm_merged_result.xls"), sep="\t", quote=FALSE, row.names=FALSE)
 
-rm(table_MA, table_merge_MA)
+rm(table_MA, table_merge_MA) #in case you save state
 # source("../edgeRmatricies.R") #for additional figures / comparison of normalization
