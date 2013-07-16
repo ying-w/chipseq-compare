@@ -10,6 +10,7 @@
 # read2_dump.bed: sample 2 read NOT used for mapping to peaks
 #####################################################################################################
 # quick error check
+# http://stackoverflow.com/questions/8921441/sh-test-for-existence-of-files
 if [[ $(ls -A tmp* ) ]] 
 then
     echo "Please remove all tmp files before continuing"
