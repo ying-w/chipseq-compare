@@ -71,7 +71,7 @@ then
     echo `date` >> ./$fname/${1}.log
 	echo "StepI: clean input"
     #newlines do not work in echo by default, must use echo -e which is not POSIX
-    options="$4 shift: $8 $5 shift: $9 \n$6 shift: ${10} \n$7 shift: ${11}"  
+    options="$4 shift: $8 \n$5 shift: $9 \n$6 shift: ${10} \n$7 shift: ${11}"  
     printf "%b\n" "$options" >> ./$fname/${1}.log # http://wiki.bash-hackers.org/commands/builtin/printf
     
 	zcat $2 | sed 's/\s$//g' | awk -v fname="$fname" 'BEGIN {OFS="\t"}
