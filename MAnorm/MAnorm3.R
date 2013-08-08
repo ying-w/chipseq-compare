@@ -1,8 +1,11 @@
 # major modifications to MAnorm to be faster + calculate p-value using edgeR
 #####################################################################################################
-# ideally we would just pass in a boolean subset index instead of full matrix
+# ideally we would just pass in a boolean vector for intersect instead of full matrix
 # but because of the way that the files are generated in earlier step, this is easier
-# code mostly copied from affy::normalize.loess function
+# Todo:
+# finish fixing catch case for no replicates
+
+# normalizeMA() code adapted from affy::normalize.loess function
 # https://hedgehog.fhcrc.org/bioconductor/trunk/madman/Rpacks/affy/R/normalize.loess.R
 normalizeMA = function(subset_mat, full_mat, method="loess", log.it=TRUE)
 {
@@ -214,42 +217,43 @@ plotSmoothMA = function(mat, pvals = NULL, pval_cut = 0.01, plotfun = smoothScat
 ## Run this code
 #####################################################################################################
 if(length(list.files(pattern="read1a.bed")) == 1) {  #11 arguments used, prob could be made more stringent
-    common_peak_count_read1a = read.table("tmp_common_peak_count_read1a",header=FALSE)
-    common_peak_count_read2a = read.table("tmp_common_peak_count_read2a",header=FALSE)
-    common_peak_count_read1b = read.table("tmp_common_peak_count_read1b",header=FALSE)
-    common_peak_count_read2b = read.table("tmp_common_peak_count_read2b",header=FALSE)
-    peak_count_read1a = read.table("tmp_peak_count_read1a",header=FALSE)
-    peak_count_read2a = read.table("tmp_peak_count_read2a",header=FALSE)
-    peak_count_read1b = read.table("tmp_peak_count_read1b",header=FALSE)
-    peak_count_read2b = read.table("tmp_peak_count_read2b",header=FALSE)
-    merge_common_only_count_read1a = read.table("tmp_merge_common_read1a", header=FALSE)
-    merge_common_only_count_read1b = read.table("tmp_merge_common_read1b", header=FALSE)
-    merge_common_only_count_read2a = read.table("tmp_merge_common_read2a", header=FALSE)
-    merge_common_only_count_read2b = read.table("tmp_merge_common_read2b", header=FALSE)
-    merge_common_peak_count_read1a = read.table("tmp_merge_common_peak_count_read1a",header=FALSE)
-    merge_common_peak_count_read2a = read.table("tmp_merge_common_peak_count_read2a",header=FALSE)
-    merge_common_peak_count_read1b = read.table("tmp_merge_common_peak_count_read1b",header=FALSE)
-    merge_common_peak_count_read2b = read.table("tmp_merge_common_peak_count_read2b",header=FALSE)
+    # common is intersect, merge is pairwise overlaps merged
+    common_peak_count_read1a = read.table("tmp_common_peak_read1a.counts",header=FALSE)
+    common_peak_count_read2a = read.table("tmp_common_peak_read2a.counts",header=FALSE)
+    common_peak_count_read1b = read.table("tmp_common_peak_read1b.counts",header=FALSE)
+    common_peak_count_read2b = read.table("tmp_common_peak_read2b.counts",header=FALSE)
+    peak_count_read1a = read.table("tmp_peak_read1a.counts",header=FALSE)
+    peak_count_read2a = read.table("tmp_peak_read2a.counts",header=FALSE)
+    peak_count_read1b = read.table("tmp_peak_read1b.counts",header=FALSE)
+    peak_count_read2b = read.table("tmp_peak_read2b.counts",header=FALSE)
+    merge_common_count_read1a = read.table("tmp_merge_common_read1a.counts", header=FALSE)
+    merge_common_count_read1b = read.table("tmp_merge_common_read1b.counts", header=FALSE)
+    merge_common_count_read2a = read.table("tmp_merge_common_read2a.counts", header=FALSE)
+    merge_common_count_read2b = read.table("tmp_merge_common_read2b.counts", header=FALSE)
+    merge_common_peak_count_read1a = read.table("tmp_merge_common_peak_read1a.counts",header=FALSE)
+    merge_common_peak_count_read2a = read.table("tmp_merge_common_peak_read2a.counts",header=FALSE)
+    merge_common_peak_count_read1b = read.table("tmp_merge_common_peak_read1b.counts",header=FALSE)
+    merge_common_peak_count_read2b = read.table("tmp_merge_common_peak_read2b.counts",header=FALSE)
     common_count_mat = cbind(common_peak_count_read1a[,4], common_peak_count_read1b[,4], 
         common_peak_count_read2a[,4], common_peak_count_read2b[,4])
     all_count_mat = cbind(peak_count_read1a[,4], peak_count_read1b[,4], 
         peak_count_read2a[,4], peak_count_read2b[,4])
-    common_merge_count_mat = cbind(merge_common_only_count_read1a[,4], merge_common_only_count_read1b[,4],
-        merge_common_only_count_read2a[,4], merge_common_only_count_read2b[,4])
+    common_merge_count_mat = cbind(merge_common_count_read1a[,4], merge_common_count_read1b[,4],
+        merge_common_count_read2a[,4], merge_common_count_read2b[,4])
     all_merge_count_mat = cbind(merge_common_peak_count_read1a[,4], merge_common_peak_count_read1b[,4], 
         merge_common_peak_count_read2a[,4], merge_common_peak_count_read2b[,4])
 } else { 
-    common_peak_count_read1 = read.table("tmp_common_peak_count_read1",header=FALSE)
-    common_peak_count_read2 = read.table("tmp_common_peak_count_read2",header=FALSE)
-    peak_count_read1 = read.table("tmp_peak_count_read1",header=FALSE)
-    peak_count_read2 = read.table("tmp_peak_count_read2",header=FALSE)
-    merge_common_only_count_read1 = read.table("tmp_merge_common_read1", header=FALSE)
-    merge_common_only_count_read2 = read.table("tmp_merge_common_read2", header=FALSE)
-    merge_common_peak_count_read1 = read.table("tmp_merge_common_peak_count_read1",header=FALSE)
-    merge_common_peak_count_read2 = read.table("tmp_merge_common_peak_count_read2",header=FALSE)
+    common_peak_count_read1 = read.table("tmp_common_peak_read1.counts",header=FALSE)
+    common_peak_count_read2 = read.table("tmp_common_peak_read2.counts",header=FALSE)
+    peak_count_read1 = read.table("tmp_peak_read1.counts",header=FALSE)
+    peak_count_read2 = read.table("tmp_peak_read2.counts",header=FALSE)
+    merge_common_count_read1 = read.table("tmp_merge_common_read1.counts", header=FALSE)
+    merge_common_count_read2 = read.table("tmp_merge_common_read2.counts", header=FALSE)
+    merge_common_peak_count_read1 = read.table("tmp_merge_common_peak_read1.counts",header=FALSE)
+    merge_common_peak_count_read2 = read.table("tmp_merge_common_peak_read2.counts",header=FALSE)
     common_count_mat = cbind(common_peak_count_read1, common_peak_count_read2)
-    all_count_mat = cbind(peak_count_read1, peak_count2)
-    common_merge_count_mat = cbind(merge_common_only_count_read1, merge_common_only_count_read2)
+    all_count_mat = cbind(peak_count_read1, peak_count_read2)
+    common_merge_count_mat = cbind(merge_common=merge_common_count_read1, merge_common_count_read2)
     all_merge_count_mat = cbind(merge_common_peak_count_read1, merge_common_peak_count_read2)
 }
 table_MA = read.table("tmp_MAnorm.bed",header=FALSE)
@@ -350,7 +354,7 @@ require(edgeR)
 ################################################################################
 # Differential call using edgeR and normalized count matrix (offset matrix)
 ################################################################################
-res = DGEList(all_count_mat, group = c(0,0,1,1))
+res = DGEList(all_count_mat, group = c(1,1,0,0))
 offset_mat = log(all_count_mat+1) - log(normalized_all_count_mat+1)
 # standardize offset matrix: https://stat.ethz.ch/pipermail/bioconductor/2013-March/051680.html
 avgloglibsize = mean(log(res$samples$lib.size))
@@ -424,7 +428,7 @@ points(A_tmp, M_tmp, pch=20, cex=0.2, col="blue")
 dev.off()
 
 #Using offsets
-resm = DGEList(all_merge_count_mat, group = c(0,0,1,1))
+resm = DGEList(all_merge_count_mat, group = c(1,1,0,0))
 offset_mat2 = log(all_merge_count_mat+1) - log(normalized_all_merge_count_mat+1)
 avgloglibsize = mean(log(resm$samples$lib.size))
 offset_mat2 = offset_mat2 - mean(offset_mat2) + avgloglibsize
