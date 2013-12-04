@@ -1,18 +1,18 @@
 # DIME
 
-Sorry this directory is currently a mess.
-
 Here is some code to preprocess data for [DIME](http://www.stat.osu.edu/~statgen/SOFTWARE/DIME/).
 Their 2011 Bioinformatics paper can be found [here](http://pubmed.gov/21471015).
 
 The author (C. Taslim) was kind enough to send me some matlab code to do the loess normalization used as input for DIME.
-The matlab code can is in the following 3 files:
+The matlab code can is in the following 3 files and implements normalization from their 2009 Bioinformatics paper [here](http://pubmed.gov/19561022)
 
     normalizeMeanVarStep1.m
     normalizeMeanVarStep2.m
     runNormzMeanVarStep1_2.m
     
-I have rewritten parts of what the three matlab scripts will do and put them into an R file: `loess.R`
+I have rewritten parts the three matlab scripts into an R file: `loess.R`
+These 3 matlab files will not run under [Octave](http://www.gnu.org/software/octave/) due the smooth function missing a loess option.
+The output of this script is used as input for DIME.
 
 If memory serves me correctly, I then made non-overlapping bins over an entire chromosome and counted reads in each bin using something like:
 
@@ -28,7 +28,7 @@ intersectBed -v -abam ../experimentB2.bam -b ../artifact2.bed | coverageBed -aba
  
 `artifact2.bed` is merged file containing DAC Blacklisted Regions and Duke Excluded Regions from ENCODE project
 
-I then split up the file the coverage files by chromosome using `splitcov.pl` and tried run `loess.R` and then run DIME using something like:
+I then split up the file the coverage files by chromosome using `splitcov.pl` and run `loess.R` and then run DIME (below):
 
 ```R
 library(DIME)

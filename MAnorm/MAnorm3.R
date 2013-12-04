@@ -1,7 +1,18 @@
-# major modifications to MAnorm to be faster + calculate p-value using edgeR
+# Author: Ying Wu daiyingw@gmail.com
+# Last major update: December 2013
+# This version is heavily modified from the original version
+# to be faster and calculate p-value using edgeR
+# License for this code should be the same as the original code but license is not given for original
+# Latest version: https://github.com/ying-w/chipseq-compare/tree/master/MAnorm
+# Original : http://bcb.dfci.harvard.edu/~gcyuan/MAnorm/R_tutorial.html
+#
+# This script should be run with MAnorm3.sh in the same directory and is called 
+# by this bash script at the 4th step
+#
 #####################################################################################################
 # ideally we would just pass in a boolean vector for intersect instead of full matrix
 # but because of the way that the files are generated in earlier step, this is easier
+# prob will be more efficient with a complete rewrite
 # Todo:
 # finish fixing catch case for no replicates
 
@@ -9,6 +20,7 @@
 # https://hedgehog.fhcrc.org/bioconductor/trunk/madman/Rpacks/affy/R/normalize.loess.R
 normalizeMA = function(subset_mat, full_mat, method="loess", log.it=TRUE)
 {
+    # Normalize using MA line for each replicate
     # method can be either loess (NOT loWess) or rlm
     # should not return anything < 0 or else edgeR wont work
 
@@ -90,6 +102,8 @@ normalizeMA = function(subset_mat, full_mat, method="loess", log.it=TRUE)
 }
 
 extractTitle = function(titles, numsplit = 2) {
+    # This function is to extract condition name from 
+    # text field for title when plotting
     # possibilities are:
     #  title1, title2
     #  title1_rep1, title1_rep2, title2_rep1, title2_rep2
@@ -125,11 +139,12 @@ extractTitle = function(titles, numsplit = 2) {
 plotSmoothMA = function(mat, pvals = NULL, pval_cut = 0.01, plotfun = smoothScatter, 
     mergeReps = "append", sel=rep(FALSE, nrow(mat)), myTitle = NULL, prefix = "TF", 
     xlim = NULL, ylim = NULL, color = NULL, ...) {
-# parts from pv.DBAplotMA() in DiffBind/R/analyze.R
-# mergeReps can be append or add, c("append", "add")
-# This will split the matrix into left and right with additional columns being replicates
-# use sel to obtain subset (say fdr cutoff)
-# takes UNlogged mat
+    # Creates a smoothed MA plot
+    # parts from pv.DBAplotMA() in DiffBind/R/analyze.R
+    # mergeReps can be append or add, c("append", "add")
+    # This will split the matrix into left and right with additional columns being replicates
+    # use sel to obtain subset (say fdr cutoff)
+    # takes UNlogged mat
     if(class(mat) == "DGELRT") { #edgeR glmLRT output
         # M = res$Fold
         # A = res$Conc
@@ -214,7 +229,7 @@ plotSmoothMA = function(mat, pvals = NULL, pval_cut = 0.01, plotfun = smoothScat
 }
 
 #####################################################################################################
-## Run this code
+## BELOW IS CODE THAT IS RUN
 #####################################################################################################
 if(length(list.files(pattern="read1a.bed")) == 1) {  #11 arguments used, prob could be made more stringent
     # common is intersect, merge is pairwise overlaps merged
@@ -242,7 +257,7 @@ if(length(list.files(pattern="read1a.bed")) == 1) {  #11 arguments used, prob co
         merge_common_count_read2a[,4], merge_common_count_read2b[,4])
     all_merge_count_mat = cbind(merge_common_peak_count_read1a[,4], merge_common_peak_count_read1b[,4], 
         merge_common_peak_count_read2a[,4], merge_common_peak_count_read2b[,4])
-} else { 
+} else { # no replicates
     common_peak_count_read1 = read.table("tmp_common_peak_read1.counts",header=FALSE)
     common_peak_count_read2 = read.table("tmp_common_peak_read2.counts",header=FALSE)
     peak_count_read1 = read.table("tmp_peak_read1.counts",header=FALSE)
@@ -330,13 +345,13 @@ dev.off()
 # Differential call using edgeR and normalized count matrix (subtract MA adjustment)
 # DIFFBIND WAY (only works for replicates (group = 4))
 # does not work as well as using offset matrix (see below)
-if(0) {
+if(0) { #old edgeR workflow
 require(edgeR)
 normalized_all_count_mat[normalized_all_count_mat < 0] = 0
 res = DGEList(normalized_all_count_mat)
 res$samples$group = c(0,0,1,1)
 res$counts = round(res$counts) #method requires integers
-res = calcNormFactors(res,method="TMM") #possibly not needed
+res = calcNormFactors(res,method="TMM") #ignored when offset is specified
 res$design = model.matrix(~res$samples$group)
 res = estimateGLMCommonDisp(res,res$design)
 # estimateGLMCommonDisp() calculates logCPM abundance and common dispersion
@@ -356,9 +371,10 @@ require(edgeR)
 ################################################################################
 res = DGEList(all_count_mat, group = c(1,1,0,0))
 offset_mat = log(all_count_mat+1) - log(normalized_all_count_mat+1)
-# standardize offset matrix: https://stat.ethz.ch/pipermail/bioconductor/2013-March/051680.html
+# shift offset matrix: https://stat.ethz.ch/pipermail/bioconductor/2013-March/051680.html
+# keep in mind that this ignores libsize diff since offset takes that into account
 avgloglibsize = mean(log(res$samples$lib.size))
-offset_mat = offset_mat - mean(offset_mat) + avgloglibsize
+offset_mat = offset_mat - mean(offset_mat) + avgloglibsize 
 #no TMM
 res$design = model.matrix(~res$samples$group)
 res = estimateGLMCommonDisp(res, res$design, offset = offset_mat)
@@ -372,7 +388,7 @@ GLM = glmFit(res,res$design, offset = offset_mat); LRT = glmLRT(GLM,2)
 #plotSmoothMA(LRT)
 #dev.off()
 
-require(qvalue)
+require(qvalue) #possibly remove this and replace w/p.adjust
 LRT$qv = qvalue(LRT$table$PValue)
 summary(LRT$qv)
 png(paste0(f_prefix, '_hist_pval.png'), width=3000, height=3000, res=300)
@@ -391,7 +407,7 @@ plotSmoothMA(LRT, pvals=LRT$qv$qvalues, plotfun=plot)
 dev.off()
 
 ################################################################################
-## do the same for merged dataset
+## do the same as above for merged dataset
 ################################################################################
 colnames(common_merge_count_mat) = c(x_name, y_name)
 colnames(all_merge_count_mat) = c(x_name, y_name)
@@ -529,7 +545,7 @@ colnames(table_MA)[16] = "-log10(q-value)"
 write.table(table_MA, paste0(f_prefix,"_MAnorm_result.xls"), sep="\t", quote=FALSE, row.names=FALSE)
 #can adjusting make numnbers less than 0?
 #adjusting can boost 0s to non-0
-#careful about using qvalues package because diff pi0 can affect
+#careful about using qvalues package because diff pi0 can affect adjustment
 #look at distribution of pvalues
 
 # table_merge
@@ -566,4 +582,4 @@ colnames(table_merge_MA)[16] = "-log10(q-value)"
 write.table(table_merge_MA, paste0(f_prefix,"_MAnorm_merged_result.xls"), sep="\t", quote=FALSE, row.names=FALSE)
 
 rm(table_MA, table_merge_MA) #Using R CMD BATCH saves workspace so remove redundant tables
-# source("../edgeRmatricies.R") #for additional figures / comparison of normalization
+# source("../edgeRmatricies.R") #for additional figures for comparison of normalization

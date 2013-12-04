@@ -1,5 +1,20 @@
-#http://bcb.dfci.harvard.edu/~gcyuan/MAnorm/R_tutorial.html
-#ex. MAnorm3.sh foldername gr_peak.bed er_peak.bed gr_rep1.bed gr_rep2.bed er_rep1.bed er_rep2.bed 120 110 95 100
+# Author: Ying Wu daiyingw@gmail.com
+# Last major update: December 2013
+# This version is heavily modified from the original version
+# License for this code should be the same as the original code but license is not given for original
+# Latest version: https://github.com/ying-w/chipseq-compare/tree/master/MAnorm
+# Original : http://bcb.dfci.harvard.edu/~gcyuan/MAnorm/R_tutorial.html
+#
+# Requirements: fairly modern version of R, bedtools, and linux/unix/mac machine
+#
+# This script should be run with MAnorm3.R in the same directory
+# StepI Reads will be filtered (remove non-chr chromosomes) and shifted
+# StepII Intersecting peaks will be isolated
+# StepIII Reads over peaks will be counted (both over all peaks and intersecting peaks only)
+# StepIV run MAnorm3.R to use edgeR to find differentially bound peaks
+# Cleanup rm tmp_*
+# 
+# Usage: MAnorm3.sh foldername gr_peak.bed er_peak.bed gr_rep1.bed gr_rep2.bed er_rep1.bed er_rep2.bed 120 110 95 100
 # gr_peak.bed: sample 1 significant peak list
 # er_peak.bed: sample 2 significant peak list
 # gr_rep1.bed: sample 1 raw reads rep1
@@ -13,7 +28,8 @@
 # tmp_(merge_)(common_/unique_)peak(1/2/)_read(1a/1b/1).(bed/counts)
 #
 # tmp_      is used to remove all files at the end of the script
-# common_	refers to intersect of the two peaks being compared
+# merge_    using merged reference regions or pooled
+# common_	refers to intersect of the two sets of peaks being compared
 # unique_	refers to setdiff of the two peaks being compared
 # peak_ 	refers to current peak file of interest (1 or 2) if no number then 1+2
 # read  	refers to current replicate (a/b) counted over in condition (1/2)
@@ -21,83 +37,89 @@
 # counts	used for all variables that store counts (using coverageBed)
 #####################################################################################################
 # Todo: 
+# make code work with no replicates [needs motifications to MAnorm3.R]
 # resume by step# feature 
-# bounds checking when shifting since can result in negative coordinate
+# bounds checking when shifting since can result in negative coordinates
 # catch case when nothing is unique (same peaks file used)
 # catch for directory already exists (overwrite)
+# additional error checking (never ending)
+# someday I might rewrite the whole program to run it within R without bedtools
 
 fname=$1
 if [ ! -d "$fname" ]
 then #http://stackoverflow.com/questions/59838/how-to-check-if-a-directory-exists-in-a-shell-script
     mkdir $fname
-elif [[ $(ls -A ./$fname/tmp* ) ]]
+elif [[ $(ls -A ./$fname/tmp* ) ]] #fix case where no tmp files found leads to error msg
 then # quick error check: http://stackoverflow.com/questions/8921441/sh-test-for-existence-of-files
     echo "Please remove all tmp files before continuing"
-    exit 1
+    exit 1 
 fi
 echo $@ > ./$fname/${1}.log
 echo `date` >> ./$fname/${1}.log  
 
 echo "StepI: clean and sort input"
 #dump and shift reads from bed (except chrM and *random*)
-if [ $# -eq 7 ]
+if [ $# -eq 7 ] # no replicates
 then
-    echo "no replicates" >> ./$fname/${1}.log  
-    #newlines do not work in echo by default, must use echo -e which is not POSIX
-    options="$4 shift: $6\n$5 shift: $7"  
-    printf "%b\n" "$options" >> ./$fname/${1}.log # http://wiki.bash-hackers.org/commands/builtin/printf
-	#global variables must passed into awk using -v
+    # # MAnorm3.R will fail without replicates!
+    echo "This script does not currently work without replicates (will be updated in the future)"
+    exit
+    # echo "no replicates" >> ./$fname/${1}.log  
+    # #newlines do not work in echo by default, must use echo -e which is not POSIX
+    # options="$4 shift: $6\n$5 shift: $7"  
+    # printf "%b\n" "$options" >> ./$fname/${1}.log # http://wiki.bash-hackers.org/commands/builtin/printf
+	# #global variables must passed into awk using -v
 
-    #shift NOT extend
-	zcat $2 | sed 's/\s$//g' | awk -v fname="$fname" 'BEGIN {OFS="\t"}
-		{if ($1~/chr/ && $1 !="chrM" && $1 !~/random/ && $3>$2 && $2>0 && $3>0)
-			print $1,$2,$3 > "./"fname"/tmp_peak1.bed";
-		else 
-			print $0 > "./"fname"/tmp_peak1_exclude.bed"}' &
-	zcat $3 | sed 's/\s$//g' | awk -v fname="$fname" 'BEGIN {OFS="\t"}
-		{if ($$1~/chr/ && 1 !="chrM"  && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
-			print $1,$2,$3 > "./"fname"/tmp_peak2.bed";
-		else 
-			print $0 > "./"fname"/tmp_peak2_exclude.bed"}' &
-	zcat $4 | sed 's/\s$//g' | awk -v fname="$fname" -v shift1=$6 'BEGIN {OFS="\t"}
-		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
-			print $1,$2+shift1,$3+shift1 > "./"fname"/tmp_read1.bed";
-		else if ($1~/chr/ && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift1 && $3>shift1)
-			print $1,$2-shift1,$3-shift1 > "./"fname"/tmp_read1.bed";
-		else 
-			print $0 > "./"fname"/tmp_read1_exclude.bed"}' &
-	zcat $5 | sed 's/\s$//g' | awk -v fname="$fname" -v shift2=$7 'BEGIN {OFS="\t"}
-		{if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
-			print $1,$2+shift2,$3+shift2 > "./"fname"/tmp_read2.bed";
-		else if ($1~/chr/ && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift2 && $3>shift2)
-			print $1,$2-shift2,$3-shift2 > "./"fname"/tmp_read2.bed";
-		else 
-			print $0 > "./"fname"/tmp_read2_exclude.bed"}' &
-    wait
-    #remember that sort is in non-ASCII order ie 1, 10, 11, 2, etc
-    sort -k1,1 -k2,3n ./$fname/tmp_peak1.bed > ./$fname/tmp_peak1s.bed &
-    sort -k1,1 -k2,3n ./$fname/tmp_peak2.bed > ./$fname/tmp_peak2s.bed &
-    sort -k1,1 -k2,3n ./$fname/tmp_read1.bed > ./$fname/tmp_read1s.bed &
-    sort -k1,1 -k2,3n ./$fname/tmp_read2.bed > ./$fname/tmp_read2s.bed &
-    wait
-    #cannot replace file that is being sorted
-    mv ./$fname/tmp_peak1s.bed ./$fname/tmp_peak1.bed
-    mv ./$fname/tmp_peak2s.bed ./$fname/tmp_peak2.bed
-    mv ./$fname/tmp_read1s.bed ./$fname/tmp_read1.bed
-    mv ./$fname/tmp_read2s.bed ./$fname/tmp_read2.bed
-    #write to log
-	echo "wc -l tmp_peak1.bed `wc -l ./$fname/tmp_peak1.bed` | cut -f 1 -d " "" >> ./$fname/${1}.log
-	echo "wc -l tmp_peak2.bed `wc -l ./$fname/tmp_peak2.bed` | cut -f 1 -d " "" >> ./$fname/${1}.log    
-	echo "wc -l tmp_read1.bed `wc -l ./$fname/tmp_read1.bed` | cut -f 1 -d " "" >> ./$fname/${1}.log
-	echo "wc -l tmp_read2.bed `wc -l ./$fname/tmp_read2.bed` | cut -f 1 -d " "" >> ./$fname/${1}.log
-	echo "wc -l tmp_read1_exclude.bed `wc -l ./$fname/tmp_read1_exclude.bed` | cut -f 1 -d " "" >> ./$fname/${1}.log
-	echo "wc -l tmp_read2_exclude.bed `wc -l ./$fname/tmp_read2_exclude.bed` | cut -f 1 -d " "" >> ./$fname/${1}.log
-elif [ $# -eq 11 ]
+    # #shift NOT extend
+	# zcat $2 | sed 's/\s$//g' | awk -v fname="$fname" 'BEGIN {OFS="\t"}
+		# {if ($1~/chr/ && $1 !="chrM" && $1 !~/random/ && $3>$2 && $2>0 && $3>0)
+			# print $1,$2,$3 > "./"fname"/tmp_peak1.bed";
+		# else 
+			# print $0 > "./"fname"/tmp_peak1_exclude.bed"}' &
+	# zcat $3 | sed 's/\s$//g' | awk -v fname="$fname" 'BEGIN {OFS="\t"}
+		# {if ($$1~/chr/ && 1 !="chrM"  && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
+			# print $1,$2,$3 > "./"fname"/tmp_peak2.bed";
+		# else 
+			# print $0 > "./"fname"/tmp_peak2_exclude.bed"}' &
+	# zcat $4 | sed 's/\s$//g' | awk -v fname="$fname" -v shift1=$6 'BEGIN {OFS="\t"}
+		# {if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
+			# print $1,$2+shift1,$3+shift1 > "./"fname"/tmp_read1.bed";
+		# else if ($1~/chr/ && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift1 && $3>shift1)
+			# print $1,$2-shift1,$3-shift1 > "./"fname"/tmp_read1.bed";
+		# else 
+			# print $0 > "./"fname"/tmp_read1_exclude.bed"}' &
+	# zcat $5 | sed 's/\s$//g' | awk -v fname="$fname" -v shift2=$7 'BEGIN {OFS="\t"}
+		# {if ($1~/chr/ && $1 !="chrM" && $6=="+" && $1 !~/random/ && $3>$2  && $2>0 && $3>0)
+			# print $1,$2+shift2,$3+shift2 > "./"fname"/tmp_read2.bed";
+		# else if ($1~/chr/ && $1 !="chrM" && $6=="-" && $1 !~/random/ && $3>$2  && $2>shift2 && $3>shift2)
+			# print $1,$2-shift2,$3-shift2 > "./"fname"/tmp_read2.bed";
+		# else 
+			# print $0 > "./"fname"/tmp_read2_exclude.bed"}' &
+    # wait
+    # #remember that sort is in non-ASCII order ie 1, 10, 11, 2, etc
+    # sort -k1,1 -k2,3n ./$fname/tmp_peak1.bed > ./$fname/tmp_peak1s.bed &
+    # sort -k1,1 -k2,3n ./$fname/tmp_peak2.bed > ./$fname/tmp_peak2s.bed &
+    # sort -k1,1 -k2,3n ./$fname/tmp_read1.bed > ./$fname/tmp_read1s.bed &
+    # sort -k1,1 -k2,3n ./$fname/tmp_read2.bed > ./$fname/tmp_read2s.bed &
+    # wait
+    # #cannot replace file that is being sorted
+    # mv ./$fname/tmp_peak1s.bed ./$fname/tmp_peak1.bed
+    # mv ./$fname/tmp_peak2s.bed ./$fname/tmp_peak2.bed
+    # mv ./$fname/tmp_read1s.bed ./$fname/tmp_read1.bed
+    # mv ./$fname/tmp_read2s.bed ./$fname/tmp_read2.bed
+    # #write to log
+	# echo "wc -l tmp_peak1.bed `wc -l ./$fname/tmp_peak1.bed` | cut -f 1 -d " "" >> ./$fname/${1}.log
+	# echo "wc -l tmp_peak2.bed `wc -l ./$fname/tmp_peak2.bed` | cut -f 1 -d " "" >> ./$fname/${1}.log    
+	# echo "wc -l tmp_read1.bed `wc -l ./$fname/tmp_read1.bed` | cut -f 1 -d " "" >> ./$fname/${1}.log
+	# echo "wc -l tmp_read2.bed `wc -l ./$fname/tmp_read2.bed` | cut -f 1 -d " "" >> ./$fname/${1}.log
+	# echo "wc -l tmp_read1_exclude.bed `wc -l ./$fname/tmp_read1_exclude.bed` | cut -f 1 -d " "" >> ./$fname/${1}.log
+	# echo "wc -l tmp_read2_exclude.bed `wc -l ./$fname/tmp_read2_exclude.bed` | cut -f 1 -d " "" >> ./$fname/${1}.log
+elif [ $# -eq 11 ] # 1 replicate
 then 
 	#mostly copied from above
 	#add functionality to combine replicates
 	#"proper" way would be to downscale replicates so that both contribute equally (not done)
-    echo "2 replicates" >> ./$fname/${1}.log
+    echo "duplicates" >> ./$fname/${1}.log
     #newlines do not work in echo by default, must use echo -e which is not POSIX
     #on ubuntu echo automatically adds newline
     options="$4 shift: $8 \n$5 shift: $9 \n$6 shift: ${10} \n$7 shift: ${11}"  
