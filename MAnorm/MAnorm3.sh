@@ -13,6 +13,11 @@
 # StepIII Reads over peaks will be counted (both over all peaks and intersecting peaks only)
 # StepIV run MAnorm3.R to use edgeR to find differentially bound peaks
 # Cleanup rm tmp_*
+#
+# Several figures will be created to show fold change versus binding of shared 
+# peaks before and after normalization and also two tab deliminated files (ending
+# in .xls) will be created from the output of edgeR. This output format was made 
+# to match original MAnorm output
 # 
 # Usage: MAnorm3.sh foldername gr_peak.bed er_peak.bed gr_rep1.bed gr_rep2.bed er_rep1.bed er_rep2.bed 120 110 95 100
 # gr_peak.bed: sample 1 significant peak list
@@ -24,12 +29,13 @@
 # shifts for:
 # gr_rep1(120), gr_rep2(110), er_rep1(95), er_rep2(100)
 #
-# how variable names are structured:
+# how variable names are structured 
+# (terminology kept consistant with original MAnorm code):
 # tmp_(merge_)(common_/unique_)peak(1/2/)_read(1a/1b/1).(bed/counts)
 #
 # tmp_      is used to remove all files at the end of the script
 # merge_    using merged reference regions or pooled
-# common_	refers to intersect of the two sets of peaks being compared
+# common_	refers to intersect of the two sets of peaks being compared (shared peaks)
 # unique_	refers to setdiff of the two peaks being compared
 # peak_ 	refers to current peak file of interest (1 or 2) if no number then 1+2
 # read  	refers to current replicate (a/b) counted over in condition (1/2)
@@ -37,6 +43,7 @@
 # counts	used for all variables that store counts (using coverageBed)
 #####################################################################################################
 # Todo: 
+# switch for gzip
 # make code work with no replicates [needs motifications to MAnorm3.R]
 # resume by step# feature 
 # bounds checking when shifting since can result in negative coordinates
@@ -383,7 +390,7 @@ cat ./$fname/tmp_merge_unique_peak1_read2.counts ./$fname/tmp_merge_common_read2
 wait
 
 #####################################################################################################
-echo "SetpIV: normalize using common peaks"
+echo "StepIV: normalize using common peaks"
 #R --vanilla MAnorm.r >Rcommand.out 
 #R CMD BATCH ../MAnorm.r Rcommand.out
 cd ./$fname/

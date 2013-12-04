@@ -1,9 +1,27 @@
 MAnorm
 ======
-My modified/improved version for testing.
+MAnorm3 is my improved version.
 
 Original can be found [here](http://bcb.dfci.harvard.edu/~gcyuan/MAnorm/R_tutorial.html) 
 Published in [Genome Biology 2012](http://www.ncbi.nlm.nih.gov/pubmed/22424423)
+
+Workflow
+--------
+* StepI: clean and sort input
+* StepII: classify common or unique peaks
+* StepIII: count peak read
+* StepIV: normalize using common peaks
+
+Experience from running on a quad core workstation with 32gb of ram: 
+* StepI is I/O bound (mostly reading from disk and writing back to disk)
+* StepII & StepIII is CPU bound (lots of parallel bedtools)
+* Ram usage I've seen with ENCODE datasets is 20gb+/-5gb but I dont actually think all of this is used for processing
+
+Files
+-----
+MAnorm - original
+MAnorm2 - v2 retains input/output compatibility w/original but will be faster and pools replicates
+MAnorm3 - v3 has different input/output, uses edgeR with replicates
 
 Problems with MAnorm
 --------------------
@@ -19,9 +37,9 @@ Problems with MAnorm
 Changes in v3
 -------------
 This version uses [edgeR](http://www.bioconductor.org/packages/release/bioc/html/edgeR.html) for significance testing.
-* Requires 2 replicates (since [ENCODE samples](http://ftp.ebi.ac.uk/pub/databases/ensembl/encode/integration_data_jan2011/byDataType/mappedReads/) have 2 replicates)
+* Requires a replicate (since [ENCODE samples](http://ftp.ebi.ac.uk/pub/databases/ensembl/encode/integration_data_jan2011/byDataType/mappedReads/) have 2 reps)
 * Run bedtools in parallel (faster unless you have IO bottleneck)
-* Added Parameter for output directory specification
+* Added parameter specify output directory
 * MA adjustment is included as an offset to edgeR model
 * sortBed before mergeBed command so the merged dataset is actually merged
 * Requires input to be gzipped (will add switch for this later)
@@ -32,23 +50,16 @@ Todo
 * Contact MAnorm author about some of the issues in p-value calculation and merging
 * Add error checks and helpeful diagnostic messages
 * Add switch to check for .gz ending
+* Change code so samples with no replicates can run
 
 Changes in v2
 -------------
-This version tries to keep the same output as original MAnorm but has the following changes:
+This version tries to keep the same input/output as original MAnorm but has the following changes:
 * I run bedtools in parallel in the background for significant speedup.
-* Allows replicates (see read in part of MAnorm2.sh)
+* Allows replicates (see 'read in' section of MAnorm2.sh code)
   * Concatenates replicates (proper way would be to downsample so replicates have equal weight)
-  * Not well tested code was merged in from MAnorm3
+  * Not well tested, use MAnorm3 if you have replicates
 
-Experience from running on a quad core workstation with 32gb of ram: 
-* StepI is I/O bound (mostly reading from disk and writing back to disk)
-* StepII & StepIII is CPU bound (lots of parallel bedtools)
-* Ram usage I've seen with ENCODE datasets is 20gb+/-5gb but I dont actually think all of this is used for processing
-
-MAnorm - original
-MAnorm2 - v2 retains input/output compatibility w/original but will be faster and allow for replicates
-MAnorm3 - v3 has different input/output options but MA methods will be applied
 
 # Example of MAnorm3 run:
 ```bash
@@ -65,3 +76,20 @@ MAnorm3.sh peaks_folder \
 Where `60` `70` `55` `53` correspond to shift lengths (half of estimated fragment length) for `readsA1.bed` `readsA2.bed` `readsB1.bed` `readsB2.bed` 
 and `readsA1` and `readsA2` are replicates used to identify peaks in `peaksA`. You must have MAnorm3.sh in your `$PATH` and MAnorm3.R must
 be in current working directory (you could modify this in MAnorm3.sh). 
+
+Second example:
+
+    Usage: MAnorm3.sh foldername gr_peak.bed er_peak.bed gr_rep1.bed gr_rep2.bed er_rep1.bed er_rep2.bed 120 110 95 100
+
+    gr_peak.bed: sample 1 significant peak list
+    er_peak.bed: sample 2 significant peak list
+    gr_rep1.bed: sample 1 raw reads rep1
+    gr_rep2.bed: sample 1 raw reads rep2
+    er_rep1.bed: sample 2 raw reads rep1
+    er_rep2.bed: sample 2 raw reads rep2
+
+    shifts (1/2 est fragment size):
+    gr_rep1: 120
+    gr_rep2: 110
+    er_rep1: 95
+    er_rep2: 100

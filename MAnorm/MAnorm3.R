@@ -434,9 +434,9 @@ png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all.png'), width=3000, he
 plotSmoothMA(all_merge_count_mat)
 dev.off()
 
-#png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all_common.png'), width=3000, height=3000, res=300)
-#plotSmoothMA(all_merge_count_mat, sel = table_merge_MA[,4] == "merged_common_peak")
-#dev.off()
+png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all_common.png'), width=3000, height=3000, res=300)
+plotSmoothMA(all_merge_count_mat, sel = table_merge_MA[,4] == "merged_common_peak")
+dev.off()
 
 png(paste0(f_prefix, '_MAsmooth_merge_before_rescaling_all_dots_MAline.png'), width=3000, height=3000, res=300)
 plotSmoothMA(all_merge_count_mat, plotfun=plot)

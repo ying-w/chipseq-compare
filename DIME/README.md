@@ -4,14 +4,14 @@ Here is some code to preprocess data for [DIME](http://www.stat.osu.edu/~statgen
 Their 2011 Bioinformatics paper can be found [here](http://pubmed.gov/21471015).
 
 The author (C. Taslim) was kind enough to send me some matlab code to do the loess normalization used as input for DIME.
-The matlab code can is in the following 3 files and implements normalization from their 2009 Bioinformatics paper [here](http://pubmed.gov/19561022)
+The matlab code can be found in the following 3 files and implements normalization from their 2009 Bioinformatics paper [here](http://pubmed.gov/19561022)
 
     normalizeMeanVarStep1.m
     normalizeMeanVarStep2.m
     runNormzMeanVarStep1_2.m
     
 I have rewritten parts the three matlab scripts into an R file: `loess.R`
-These 3 matlab files will not run under [Octave](http://www.gnu.org/software/octave/) due the smooth function missing a loess option.
+These 3 matlab files will not run under [Octave](http://www.gnu.org/software/octave/) due the `smooth()` function missing a loess option.
 The output of this script is used as input for DIME.
 
 If memory serves me correctly, I then made non-overlapping bins over an entire chromosome and counted reads in each bin using something like:
@@ -45,7 +45,7 @@ But I must have messed up somewhere because even running a smaller chromosome I 
 
 :(
 
-Here is a couple of lines from the `vs_exprA_exprB_chr1` file:
+Here is a couple of lines from the `vs_exprA_exprB_chr1` file, this file is 118748 lines long:
 
     1.33995979450539
     1.23717107628172
@@ -57,4 +57,5 @@ Here is a couple of lines from the `vs_exprA_exprB_chr1` file:
     0
 
 ## Future direction
-If I have some time in the future, I might cut out certain regions (peaks) or make the big size larger or take possible half a chromosome but for now I will investigate other techniques.
+Probably not going to work on this further but one could cut out certain regions (peaks) 
+or make the window size larger or take half a chromosome but for now I will investigate other techniques.
