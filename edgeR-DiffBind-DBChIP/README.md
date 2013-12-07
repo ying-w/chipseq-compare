@@ -21,17 +21,17 @@ Additionally, a design matrix must be specified by the user for this method.
 The counts matrix can be created using counting over bam files using 
 `intersectBed` from [bedtools]( http://bedtools.readthedocs.org/en/latest/), 
 `htseq-count` from [htseq](http://www-huber.embl.de/users/anders/HTSeq/doc/count.html),
-`summarizeOverlaps` from [GenomicRanges](http://www.bioconductor.org/packages/release/bioc/html/GenomicRanges.html) 
+`summarizeOverlaps()` from [GenomicRanges](http://www.bioconductor.org/packages/release/bioc/html/GenomicRanges.html) 
 (and soon will be moved into [GenomicAlignments]( http://www.bioconductor.org/packages/devel/bioc/html/GenomicAlignments.html)),
-and `featureCount` from [Rsubread]( http://www.bioconductor.org/packages/release/bioc/html/Rsubread.html).
+and `featureCount()` from [Rsubread]( http://www.bioconductor.org/packages/release/bioc/html/Rsubread.html).
 All these methods are similar in concept but may have slight differences in practice due to different implementations handling edge cases differently.
-The last two are R packages and `featureCount` is supposed to be more [memory efficient](http://www.ncbi.nlm.nih.gov/pubmed/24227677).
+The last two are R packages and `featureCount()` be more [memory efficient](http://www.ncbi.nlm.nih.gov/pubmed/24227677).
 
 ## DiffBind - [website](http://www.bioconductor.org/packages/release/bioc/html/DiffBind.html)
 This program requires csv file (sample sheet) that specifies your samples and their locations. 
-The format of this csv file is detailed in the manual but a quick overview is as follows:
+The format of this csv file is detailed in the manual. The following columns are required:
 
-`SampleID,Tissue,Factor,Condition,Replicate,bamReads,bamControl,Peaks,PeakCaller`
+`SampleID`,`Tissue`,`Factor`,`Condition`,`Replicate`,`bamReads`,`bamControl`,`Peaks`,`PeakCaller`
 
 The first four columns are attributes for your samples that will be used to create a design matrix while the last four columns are for specifying file locations and type. The read files can be gzipped bed files or bam files.
 
@@ -40,7 +40,7 @@ Design matrix will be generated (as contrast) based on your attributes, based on
 Counting will be done in parallel by custom C++ code (croi) or `summarizeOverlaps` (for low memory).
 The C++ code will also extend reads based on `insertLength` and compute library size.
 
-```r
+```R
 library(DiffBind)
 DBA = dba(sampleSheet="myexperiment.csv") 
 Sys.sleep(1) #sometimes you will need this when parallel reading
@@ -56,7 +56,7 @@ The code for this program is quite short and easy to follow, there is a DBChIP.R
 
 There are two practical ways to import your data into DBChIP. Either format it as something they call MCS (minimum chip seq, which is pretty much a BED file) or use the [ShortRead]( http://www.bioconductor.org/packages/release/bioc/html/ShortRead.html) to read in your data and feed in an AlignedRead object. The last format is to specify a BED file but I found that inconvenient because I do not keep around non-compressed BED files. I opted for using MCS format (below).
 
-```r
+```R
 library(DBChIP)
 rawreads = list()
 
@@ -122,7 +122,7 @@ cond1_vs_cond2_dbchip = get.site.count(cond1_vs_cond2_dbchip)
 In this case, I used the same files as I specified in myexperiment.csv for DiffBind. Even though DiffBind will import the reads and shifts them, it does not save the read data so you cannot just load it into DBChIP. DBChIP tends to reduce the amount of information used as input (only taking 5’ end in MCS format for reads, only taking summit location for peaks).
 
 
-# Reference binding regions used
+# Reference binding regions
 This section will go over how peaks that are provided are merged / combined to define reference regions that are counted over. Ie. How to select features to count over since peaks in different conditions will overlap.
 
 ## edgeR
@@ -157,12 +157,12 @@ or
     lrt <- glmLRT(fit,coef=2)
     topTags(lrt)
 
-Trended Dispersion estimate might not be applicable for ChIP-seq and it would be good idea to check fits using `plotBCV()`
+Trended dispersion estimate might not be applicable for ChIP-seq and it would be good idea to check fits using `plotBCV()`
 
 ## DiffBind
 This program has 3 different evaluation methods (edgeR/DESeq/DESeq2). By default, edgeR is run in parallel on the contrasts specified (code in previous step) using tagwise dispersion. (See Technical Notes part of DiffBind User Guide for more details)
 
-```r
+```R
 cond1_vs_cond2_diffbind  = dba.analyze(DBA, bCorPlot=FALSE)
 head(dba.report(cond1_vs_cond2_diffbind )) #show top 6 as genomic ranges
 ```
@@ -170,7 +170,7 @@ head(dba.report(cond1_vs_cond2_diffbind )) #show top 6 as genomic ranges
 ## DBChIP
 Similar to DiffBind (above), the command to do differential testing is only one line. A variance estimation method will be performed for conditions with no replicates (see their paper for details).  
 
-```r
+```R
 cond1_vs_cond2_dbchip = test.diff.binding(cond1_vs_cond2_dbchip)
 ```
 
@@ -208,190 +208,191 @@ Input can be scaled using NCIS before subtraction. A median ratio is calculated 
 
 # Code for subtracting and normalizing differently using NCIS output
 Choices are as follows:
-- library size (full/median/effective)
+- Library Size selection (full/median/effective)
 - Input scaling and subtraction (DiffBind/NCIS/none)
 - Model input as offsets instead of subtracting from counts (yes/no)
 
 DiffBind default is : full/DiffBind/no (for newer versions) and effective/DiffBind/no (for older versions)
 DBChIP default is : median/NCIS/no when NCIS is run
 
-`libsize` will need to be defined
+`libsize` list will need to be pre-defined in `get.library.size()`
 
-    get.library.size = function(counts, f_name, method="effective") {
-        # method can be full/median/effective
-        message(paste("libnorm =", method))
-        
-        libsize = list()
-        libsize[["gr_high"]] = c(19291260, 16754796)
-        
-        ## full library size (DiffBind)
-        if(method == "full") { return(c(libsize[[f_name[1]]], libsize[[f_name[2]]])) }
-        
-        ## median library size (DBChIP)
-        if(method == "median") { # taken from DBChIP::median.ratio()
-            gm <- exp(rowMeans(log(counts)))
-            return(apply(counts, 2, function(x) median((x/gm)[gm > 0])))
-        }
+```R
+scalefactorNCIS = function(tmplist) {
+    sapply(1:ncol(tmplist$site.count), function(x) DBChIP:::NCIS.internal(
+        tmplist$chip.list[[x]], tmplist$input.list[[x]], 
+        chr.vec=tmplist$chr.vec, chr.len.vec=tmplist$chr.len.vec)$est)
+}
 
-        ## effective library size
-        if(method == "effective") { return(colSums(counts)) }
-        
-    }
+# input scaling and subtraction
+get.scaling.factor = function(counts, counts_input, scaleinput="nosub", return.final = TRUE, dat=NULL, chipBED=NULL, NCISscale=NULL) {
+# scaleinput can be DiffBind/NCIS/nosub
+# digging around https://hedgehog.fhcrc.org/bioconductor/trunk/madman/Rpacks/DiffBind/ (rev 80867)
 
-    scalefactorNCIS = function(tmplist) {
-        sapply(1:ncol(tmplist$site.count), function(x) DBChIP:::NCIS.internal(
-            tmplist$chip.list[[x]], tmplist$input.list[[x]], 
-            chr.vec=tmplist$chr.vec, chr.len.vec=tmplist$chr.len.vec)$est)
-    }
-    # input scaling and subtraction
-    get.scaling.factor = function(counts, counts_input, scaleinput="nosub", return.final = TRUE, dat=NULL, chipBED=NULL, NCISscale=NULL) {
-    # scaleinput can be DiffBind/NCIS/nosub
-    # digging around https://hedgehog.fhcrc.org/bioconductor/trunk/madman/Rpacks/DiffBind/ (rev 80867)
-
-        ## subtract input after scaling (DiffBind)
-        if(scaleinput == "DiffBind") { 
-        # from counts.R:pv.counts()
-        # libsize is created by DiffBind:::pv.getCounts which calls out to C for call to Ptr->size()
-        # guess that libsize is just sum
-        # cont = control, cond = condition
-        # edgeR call is in analyze.R:pv.DEinit() and calls utils.R:pv.get_reads()
-         
-            message("DiffBind scaling")
-            # from pv.counts()
-            scale_factor = colSums(counts) / colSums(counts_input) #scale = cond$libsize / cont$libsize
-            for(i in length(scale_factor)) {
-                if(scale_factor[i] > 1) scale_factor[i] = 1 # dont upscale control
-                if(scale_factor[i] != 0) {
-                   counts_input[,i] = ceiling(counts_input[,i] * scale_factor[i])
-                }
+    ## subtract input after scaling (DiffBind)
+    if(scaleinput == "DiffBind") { 
+    # from counts.R:pv.counts()
+    # libsize is created by DiffBind:::pv.getCounts which calls out to C for call to Ptr->size()
+    # guess that libsize is just sum
+    # cont = control, cond = condition
+    # edgeR call is in analyze.R:pv.DEinit() and calls utils.R:pv.get_reads()
+     
+        message("DiffBind scaling")
+        # from pv.counts()
+        scale_factor = colSums(counts) / colSums(counts_input) #scale = cond$libsize / cont$libsize
+        for(i in length(scale_factor)) {
+            if(scale_factor[i] > 1) scale_factor[i] = 1 # dont upscale control
+            if(scale_factor[i] != 0) {
+               counts_input[,i] = ceiling(counts_input[,i] * scale_factor[i])
             }
-            # summarized from pv.get_reads()
-            counts_final = pmax(counts - counts_input, 1)
-        } #DiffBind
-        
-        ## subtract input after NCIS (DBChIP)
-        if(scaleinput == "NCIS") { 
-            # from the following functions in DBChIP
-            # get.site.count() and get.NCIS.norm.factor()
-            
-            message("NCIS scaling")
-            # BED reading is not tested
-            # in code, it is read in as a list since multiple conditions then using lapply on read.MCS
-            # must be in chr/strand/pos
-            if(!is.null(dat)) {
-                tmplist = dat
-            } else if(is.null(dat) && !is.null(chipBED)) {
-                fiveend = chipBED[,2]; fiveend[chipBED[,6] == "-"] = chipBED[chipBED[,6] == "-",3]
-                tmpchip = DBChIP:::read.MCS(data.frame(chr=paste(chipBED[,1]), strand=chipBED[,6], pos=fiveend))
-                fiveend = inputBED[,2]; fiveend[inputBED[,6] == "-"] = inputBED[inputBED[,6] == "-",3]
-                tmplist = DBChIP:::read.MCS(data.frame(chr=paste(inputBED[,1]), strand=inputBED[,6], pos=fiveend))
-            }
-            
-            if(!is.null(NCISscale)) {
-                scale_factor = NCISscale
-            } else { 
-                scale_factor = scalefactorNCIS(tmplist) 
-            } # own function since calculation take a while so allow for precomputation
-            
-            counts_input = t(t(counts_input)*scale_factor)
-            counts_final = counts - counts_input
-            counts_final = pmax(round(counts_final), 0)
         }
-
-        ## no subtraction
-        if(scaleinput == "nosub" || scaleinput == "edgeR") { message("No input scaling"); counts_input = NULL; counts_final = counts }
-
-        if(return.final) { counts_final } else { counts_input }
+        # summarized from pv.get_reads()
+        counts_final = pmax(counts - counts_input, 1)
+    } #DiffBind
+    
+    ## subtract input after NCIS (DBChIP)
+    if(scaleinput == "NCIS") { 
+        # from the following functions in DBChIP
+        # get.site.count() and get.NCIS.norm.factor()
+        
+        message("NCIS scaling")
+        # BED reading is not tested
+        # in code, it is read in as a list since multiple conditions then using lapply on read.MCS
+        # must be in chr/strand/pos
+        if(!is.null(dat)) {
+            tmplist = dat
+        } else if(is.null(dat) && !is.null(chipBED)) {
+            fiveend = chipBED[,2]; fiveend[chipBED[,6] == "-"] = chipBED[chipBED[,6] == "-",3]
+            tmpchip = DBChIP:::read.MCS(data.frame(chr=paste(chipBED[,1]), strand=chipBED[,6], pos=fiveend))
+            fiveend = inputBED[,2]; fiveend[inputBED[,6] == "-"] = inputBED[inputBED[,6] == "-",3]
+            tmplist = DBChIP:::read.MCS(data.frame(chr=paste(inputBED[,1]), strand=inputBED[,6], pos=fiveend))
+        }
+        
+        if(!is.null(NCISscale)) {
+            scale_factor = NCISscale
+        } else { 
+            scale_factor = scalefactorNCIS(tmplist) 
+        } # own function since calculation take a while so allow for precomputation
+        
+        counts_input = t(t(counts_input)*scale_factor)
+        counts_final = counts - counts_input
+        counts_final = pmax(round(counts_final), 0)
     }
 
-    calcLRT = function(counts_final, cond1, cond2, libnorm, counts_input = NULL) {
+    ## no subtraction
+    if(scaleinput == "nosub" || scaleinput == "edgeR") { message("No input scaling"); counts_input = NULL; counts_final = counts }
+
+    if(return.final) { counts_final } else { counts_input }
+}
+
+get.library.size = function(counts, f_name, method="effective") {
+    # method can be full/median/effective
+    message(paste("libnorm =", method))
+    
+    libsize = list()
+    libsize[["gr_high"]] = c(19291260, 16754796)
+    
+    ## full library size (DiffBind)
+    if(method == "full") { return(c(libsize[[f_name[1]]], libsize[[f_name[2]]])) }
+    
+    ## median library size (DBChIP)
+    if(method == "median") { # taken from DBChIP::median.ratio()
+        gm <- exp(rowMeans(log(counts)))
+        return(apply(counts, 2, function(x) median((x/gm)[gm > 0])))
+    }
+
+    ## effective library size
+    if(method == "effective") { return(colSums(counts)) }
+    
+}
+
+calcLRT = function(counts_final, cond1, cond2, libnorm, counts_input = NULL) {
+# libnorm can be full/median/effective
+
+    if(is.null(counts_input)) {
+        message("No offset used")
+        z = DGEList(counts_final+1, group = c(1,1,0,0), lib.size = get.library.size(counts_final+1, c(cond1, cond2), method=libnorm))
+        #no TMM
+        z$design = model.matrix(~z$samples$group)
+        z = estimateGLMCommonDisp(z, z$design)
+        z = estimateGLMTagwiseDisp(z, z$design)
+        #no trended
+        LRT = glmLRT(glmFit(z,z$design),2)
+    } else {
+        message("Offset used") # input as offset
+        z = DGEList(counts_final+1, group = c(1,1,0,0), lib.size = get.library.size(counts_final+1, c(cond1, cond2), method=libnorm))
+        offset_mat = t(matrix(rep(log(z$samples$lib.size),nrow(counts_input)),nrow=ncol(counts_input))) + log(counts_input+1)
+        #no TMM
+        z$design = model.matrix(~z$samples$group)
+        z = estimateGLMCommonDisp(z, z$design, offset = offset_mat)
+        z = estimateGLMTagwiseDisp(z, z$design, offset = offset_mat) #not sure if offset should be reincluded
+        #no trended
+        LRT = glmLRT(glmFit(z,z$design, offset = offset_mat),2)
+    }
+}
+
+getInputCounts = function(dat, window.size=250) {
+# modified from DBChIP::get.site.count
+    consensus.site <- dat$consensus.site
+    res = matrix(0, nrow = sum(unlist(lapply(dat$consensus.site, nrow))), ncol = length(names(dat$chip.list)))
+    currow = 1
+    for(chr in names(consensus.site)){
+        hi <- DBChIP:::get.site.count.hist(consensus.site[[chr]]$pos, window.size=window.size)
+        #chip.count.vec <- sapply(dat$chip.list, function(x) get.chr.site.count(x[[chr]], hi))
+        
+        if(length(consensus.site[[chr]]$pos)==1) chip.count.vec <- t(as.matrix(chip.count.vec))
+        #if(!is.null(dat$input.list) && subtract.input){
+            input.count.vec <- sapply(names(dat$chip.list), function(x) DBChIP:::get.chr.site.count(dat$input.list[[dat$matching.input.names[x]]][[chr]], hi))
+        #    chip.count.vec <- chip.count.vec - t(t(input.count.vec)*dat$norm.factor.vec)
+        #    chip.count.vec <- pmax(round(chip.count.vec), 0)
+        #}
+        #rownames(input.count.vec) <- paste(chr, "_", consensus.site[[chr]]$pos, sep="")
+        #res <- rbind(res, chip.count.vec)
+        res[currow:(currow+nrow(input.count.vec)-1),] = input.count.vec #would be more efficient to do as col and t()
+        currow = currow+nrow(input.count.vec)
+    }
+    #dat$site.count <- res
+    return(res)
+}
+
+getDiff = function(dat, libnorm, f_prefix, scaleinput, useOffset=FALSE, returnLRT = FALSE, NCISscale=NULL) {
     # libnorm can be full/median/effective
-
-        if(is.null(counts_input)) {
-            message("No offset used")
-            z = DGEList(counts_final+1, group = c(1,1,0,0), lib.size = get.library.size(counts_final+1, c(cond1, cond2), method=libnorm))
-            #no TMM
-            z$design = model.matrix(~z$samples$group)
-            z = estimateGLMCommonDisp(z, z$design)
-            z = estimateGLMTagwiseDisp(z, z$design)
-            #no trended
-            LRT = glmLRT(glmFit(z,z$design),2)
-        } else {
-            message("Offset used") # input as offset
-            z = DGEList(counts_final+1, group = c(1,1,0,0), lib.size = get.library.size(counts_final+1, c(cond1, cond2), method=libnorm))
-            offset_mat = t(matrix(rep(log(z$samples$lib.size),nrow(counts_input)),nrow=ncol(counts_input))) + log(counts_input+1)
-            #no TMM
-            z$design = model.matrix(~z$samples$group)
-            z = estimateGLMCommonDisp(z, z$design, offset = offset_mat)
-            z = estimateGLMTagwiseDisp(z, z$design, offset = offset_mat) #not sure if offset should be reincluded
-            #no trended
-            LRT = glmLRT(glmFit(z,z$design, offset = offset_mat),2)
-        }
+    # scaleinput can be DiffBind/NCIS/nosub
+    
+    f_split = strsplit(f_prefix, "_")[[1]]
+    counts = dat$site.count
+    counts_input = getInputCounts(dat) # subtract raw counts
+    if(useOffset) {
+        count_adjust = get.scaling.factor(counts, counts_input, scaleinput=scaleinput, return.final = FALSE, dat = dat, NCISscale=NCISscale)
+        LRT = calcLRT(counts, paste(f_split[1], f_split[2], sep = "_"), paste(f_split[1], f_split[3], sep = "_"), libnorm, count_adjust)
+    } else { #offsets not used
+        counts_final = get.scaling.factor(counts, counts_input, scaleinput=scaleinput, return.final = TRUE, dat = dat, NCISscale=NCISscale)
+        LRT = calcLRT(counts_final, paste(f_split[1], f_split[2], sep = "_"), paste(f_split[1], f_split[3], sep = "_"), libnorm)
     }
-
-    getInputCounts = function(dat, window.size=250) {
-    # modified from DBChIP::get.site.count
-        consensus.site <- dat$consensus.site
-        res = matrix(0, nrow = sum(unlist(lapply(dat$consensus.site, nrow))), ncol = length(names(dat$chip.list)))
-        currow = 1
-        for(chr in names(consensus.site)){
-            hi <- DBChIP:::get.site.count.hist(consensus.site[[chr]]$pos, window.size=window.size)
-            #chip.count.vec <- sapply(dat$chip.list, function(x) get.chr.site.count(x[[chr]], hi))
-            
-            if(length(consensus.site[[chr]]$pos)==1) chip.count.vec <- t(as.matrix(chip.count.vec))
-            #if(!is.null(dat$input.list) && subtract.input){
-                input.count.vec <- sapply(names(dat$chip.list), function(x) DBChIP:::get.chr.site.count(dat$input.list[[dat$matching.input.names[x]]][[chr]], hi))
-            #    chip.count.vec <- chip.count.vec - t(t(input.count.vec)*dat$norm.factor.vec)
-            #    chip.count.vec <- pmax(round(chip.count.vec), 0)
-            #}
-            #rownames(input.count.vec) <- paste(chr, "_", consensus.site[[chr]]$pos, sep="")
-            #res <- rbind(res, chip.count.vec)
-            res[currow:(currow+nrow(input.count.vec)-1),] = input.count.vec #would be more efficient to do as col and t()
-            currow = currow+nrow(input.count.vec)
-        }
-        #dat$site.count <- res
-        return(res)
+    DTD = decideTestsDGE(LRT, p.value=pvalcut)
+    message(sum(DTD != 0))
+    if(returnLRT) {
+        invisible(LRT)
+    } else {
+        invisible(sum(DTD != 0))
     }
+}
 
-    getDiff = function(dat, libnorm, f_prefix, scaleinput, useOffset=FALSE, returnLRT = FALSE, NCISscale=NULL) {
-        # libnorm can be full/median/effective
-        # scaleinput can be DiffBind/NCIS/nosub
-        
-        f_split = strsplit(f_prefix, "_")[[1]]
-        counts = dat$site.count
-        counts_input = getInputCounts(dat) # subtract raw counts
-        if(useOffset) {
-            count_adjust = get.scaling.factor(counts, counts_input, scaleinput=scaleinput, return.final = FALSE, dat = dat, NCISscale=NCISscale)
-            LRT = calcLRT(counts, paste(f_split[1], f_split[2], sep = "_"), paste(f_split[1], f_split[3], sep = "_"), libnorm, count_adjust)
-        } else { #offsets not used
-            counts_final = get.scaling.factor(counts, counts_input, scaleinput=scaleinput, return.final = TRUE, dat = dat, NCISscale=NCISscale)
-            LRT = calcLRT(counts_final, paste(f_split[1], f_split[2], sep = "_"), paste(f_split[1], f_split[3], sep = "_"), libnorm)
-        }
-        DTD = decideTestsDGE(LRT, p.value=pvalcut)
-        message(sum(DTD != 0))
-        if(returnLRT) {
-            invisible(LRT)
-        } else {
-            invisible(sum(DTD != 0))
-        }
-    }
-
-    runallmethods = function(dat, f_prefix) {
-        res = data.frame("DiffBind" = rep(0,6), "NCIS" = rep(0,6), "nosub" = rep(0,6), 
-            row.names=c("full-offset", "full-nooffset", "median-offset", "median-nooffset", "effective-offset", "effective-nooffset"))
-        NCISscale = scalefactorNCIS(dat)
-        for(scaleinput in c("DiffBind", "NCIS", "nosub")) 
-            for(libnorm in c("full-offset", "full-nooffset", "median-offset", "median-nooffset", "effective-offset", "effective-nooffset"))
-                if(strsplit(libnorm, "-")[[1]][2] == "offset") {
-                    if(scaleinput != "nosub")
-                        res[libnorm, scaleinput] = getDiff(dat = dat, libnorm = strsplit(libnorm, "-")[[1]][1], f_prefix = f_prefix, scaleinput = scaleinput, useOffset = TRUE, NCISscale=NCISscale) 
-                } else {
-                    res[libnorm, scaleinput] = getDiff(dat = dat, libnorm = strsplit(libnorm, "-")[[1]][1], f_prefix = f_prefix, scaleinput = scaleinput, useOffset = FALSE, NCISscale=NCISscale) 
-                }
-        res
-    }
-
-
+runallmethods = function(dat, f_prefix) {
+    res = data.frame("DiffBind" = rep(0,6), "NCIS" = rep(0,6), "nosub" = rep(0,6), 
+        row.names=c("full-offset", "full-nooffset", "median-offset", "median-nooffset", "effective-offset", "effective-nooffset"))
+    NCISscale = scalefactorNCIS(dat)
+    for(scaleinput in c("DiffBind", "NCIS", "nosub")) 
+        for(libnorm in c("full-offset", "full-nooffset", "median-offset", "median-nooffset", "effective-offset", "effective-nooffset"))
+            if(strsplit(libnorm, "-")[[1]][2] == "offset") {
+                if(scaleinput != "nosub")
+                    res[libnorm, scaleinput] = getDiff(dat = dat, libnorm = strsplit(libnorm, "-")[[1]][1], f_prefix = f_prefix, scaleinput = scaleinput, useOffset = TRUE, NCISscale=NCISscale) 
+            } else {
+                res[libnorm, scaleinput] = getDiff(dat = dat, libnorm = strsplit(libnorm, "-")[[1]][1], f_prefix = f_prefix, scaleinput = scaleinput, useOffset = FALSE, NCISscale=NCISscale) 
+            }
+    res
+}
+```
 
     > runallmethods(gr_hl_dbchip, f_prefix = "gr_high_low")
     #                    DiffBind  NCIS nosub
