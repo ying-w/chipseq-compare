@@ -162,17 +162,15 @@ Trended dispersion estimate might not be applicable for ChIP-seq and it would be
 ## DiffBind
 This program has 3 different evaluation methods (edgeR/DESeq/DESeq2). By default, edgeR is run in parallel on the contrasts specified (code in previous step) using tagwise dispersion. (See Technical Notes part of DiffBind User Guide for more details)
 
-```R
-cond1_vs_cond2_diffbind  = dba.analyze(DBA, bCorPlot=FALSE)
-head(dba.report(cond1_vs_cond2_diffbind )) #show top 6 as genomic ranges
-```
+
+    cond1_vs_cond2_diffbind  = dba.analyze(DBA, bCorPlot=FALSE)
+    head(dba.report(cond1_vs_cond2_diffbind )) #show top 6 as genomic ranges
+
 
 ## DBChIP
 Similar to DiffBind (above), the command to do differential testing is only one line. A variance estimation method will be performed for conditions with no replicates (see their paper for details).  
 
-```R
-cond1_vs_cond2_dbchip = test.diff.binding(cond1_vs_cond2_dbchip)
-```
+    cond1_vs_cond2_dbchip = test.diff.binding(cond1_vs_cond2_dbchip)
 
 # Comparing
 Since all 3 of the programs covered use edgeR, you would think comparing outputs are simple; however, differences in reference binding regions will manifest as different number of rows for binding matrix. To get around this, you could modify the starting peaks.
@@ -217,7 +215,8 @@ DBChIP default is : median/NCIS/no when NCIS is run
 
 `libsize` list will need to be pre-defined in `get.library.size()`
 
-```R
+Unfortunately, I cannot get github's markdown parser to do syntax coloring properly for R code so [click here instead](compare-from-DBChIP.R).
+```r
 scalefactorNCIS = function(tmplist) {
     sapply(1:ncol(tmplist$site.count), function(x) DBChIP:::NCIS.internal(
         tmplist$chip.list[[x]], tmplist$input.list[[x]], 
