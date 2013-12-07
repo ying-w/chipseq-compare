@@ -4,4 +4,4 @@ This repository holds some of my scripts and findings for comparing differential
 
 * [DIME](DIME/) -- Some matlab code that I ported over to R. Method took too long to run so I gave up
 * [MAnorm](MAnorm/) -- Rewrote most of this program so it runs faster, requires replicates, and uses edgeR
-* [edgeR-DiffBind-DBChIP] -- I document how to use these three methods and some differences between them
+* [edgeR-DiffBind-DBChIP](edgeR-DiffBind-DBChIP/) -- I go over how to use these three methods and document some differences between them
