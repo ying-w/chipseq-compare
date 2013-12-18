@@ -40,7 +40,7 @@ Design matrix will be generated (as contrast) based on your attributes, based on
 Counting will be done in parallel by custom C++ code (croi) or `summarizeOverlaps` (for low memory).
 The C++ code will also extend reads based on `insertLength` and compute library size.
 
-```R
+```S
 library(DiffBind)
 DBA = dba(sampleSheet="myexperiment.csv") 
 Sys.sleep(1) #sometimes you will need this when parallel reading
@@ -56,7 +56,7 @@ The code for this program is quite short and easy to follow, there is a DBChIP.R
 
 There are two practical ways to import your data into DBChIP. Either format it as something they call MCS (minimum chip seq, which is pretty much a BED file) or use the [ShortRead]( http://www.bioconductor.org/packages/release/bioc/html/ShortRead.html) to read in your data and feed in an AlignedRead object. The last format is to specify a BED file but I found that inconvenient because I do not keep around non-compressed BED files. I opted for using MCS format (below).
 
-```R
+```S
 library(DBChIP)
 rawreads = list()
 
@@ -138,26 +138,30 @@ User provides peak summits (one coordinate not start/end) and these summits will
 ## edgeR
 How to run edgeR is pretty well documented in the [user guide](http://www.bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf). Briefly, the usual workflows are:
 
-    # pairwise
-    y <- DGEList(counts=x,group=factor(c(1,1,2,2)))
-    y <- calcNormFactors(y)
-    y <- estimateCommonDisp(y)
-    y <- estimateTagwiseDisp(y)
-    et <- exactTest(y)
-    topTags(et)
+```S
+# pairwise
+y <- DGEList(counts=x,group=factor(c(1,1,2,2)))
+y <- calcNormFactors(y)
+y <- estimateCommonDisp(y)
+y <- estimateTagwiseDisp(y)
+et <- exactTest(y)
+topTags(et)
+```
 
 or
 
-    #GLM
-    y <- DGEList(counts=x,group=factor(c(1,1,2,2)))
-    y <- calcNormFactors(y)
-    design <- model.matrix(~factor(c(1,1,2,2)))
-    y <- estimateGLMCommonDisp(y,design)
-    y <- estimateGLMTrendedDisp(y,design)
-    y <- estimateGLMTagwiseDisp(y,design)
-    fit <- glmFit(y,design)
-    lrt <- glmLRT(fit,coef=2)
-    topTags(lrt)
+```S
+#GLM
+y <- DGEList(counts=x,group=factor(c(1,1,2,2)))
+y <- calcNormFactors(y)
+design <- model.matrix(~factor(c(1,1,2,2)))
+y <- estimateGLMCommonDisp(y,design)
+y <- estimateGLMTrendedDisp(y,design)
+y <- estimateGLMTagwiseDisp(y,design)
+fit <- glmFit(y,design)
+lrt <- glmLRT(fit,coef=2)
+topTags(lrt)
+```
 
 Trended dispersion estimate might not be applicable for ChIP-seq and it would be good idea to check fits using `plotBCV()`. 
 Offsets from TMM will be used in `exactTests()` for pairwise and `getOffsets()` for GLM workflow.
@@ -165,15 +169,17 @@ Offsets from TMM will be used in `exactTests()` for pairwise and `getOffsets()` 
 ## DiffBind
 This program has 3 different evaluation methods (edgeR/DESeq/DESeq2). By default, edgeR is run in parallel on the contrasts specified (code in previous step) using tagwise dispersion. (See Technical Notes part of DiffBind User Guide for more details)
 
-
-    cond1_vs_cond2_diffbind  = dba.analyze(DBA, bCorPlot=FALSE)
-    head(dba.report(cond1_vs_cond2_diffbind )) #show top 6 as genomic ranges
-
+```S
+cond1_vs_cond2_diffbind  = dba.analyze(DBA, bCorPlot=FALSE)
+head(dba.report(cond1_vs_cond2_diffbind )) #show top 6 as genomic ranges
+```
 
 ## DBChIP
 Similar to DiffBind (above), the command to do differential testing is only one line. A variance estimation method will be performed for conditions with no replicates (see their paper for details).  
 
-    cond1_vs_cond2_dbchip = test.diff.binding(cond1_vs_cond2_dbchip)
+```S
+cond1_vs_cond2_dbchip = test.diff.binding(cond1_vs_cond2_dbchip)
+```
 
 # Comparing
 Since all 3 of the programs covered use edgeR, you would think comparing outputs are simple; however, differences in reference binding regions will manifest as different number of rows for binding matrix. To get around this, you could modify the starting peaks.
@@ -184,14 +190,16 @@ One could use the binding matrix from DiffBind or DBChIP though it is kind of po
 ## DiffBind
 Input is scaled (down only) and subtracted from counts. Default is to use full library size normalization.
 
-    # code taken from pv.counts in counts.R 
-    scale_factor = colSums(counts) / colSums(counts_input) #scale = cond$libsize / cont$libsize
-    for(i in length(scale_factor)) {
-        if(scale_factor[i] > 1) scale_factor[i] = 1 # dont upscale control
-        if(scale_factor[i] != 0) {
-           counts_input[,i] = ceiling(counts_input[,i] * scale_factor[i])
-        }
+```S
+# code taken from pv.counts in counts.R 
+scale_factor = colSums(counts) / colSums(counts_input) #scale = cond$libsize / cont$libsize
+for(i in length(scale_factor)) {
+    if(scale_factor[i] > 1) scale_factor[i] = 1 # dont upscale control
+    if(scale_factor[i] != 0) {
+       counts_input[,i] = ceiling(counts_input[,i] * scale_factor[i])
     }
+}
+```
 
 ## DBChIP
 Input can be scaled using NCIS before subtraction. A median ratio is calculated and used as library size for normalization.
@@ -221,7 +229,7 @@ DBChIP default is : median/NCIS/no when NCIS is run
 
 `libsize` list will need to be pre-defined in `get.library.size()`
 
-[click here](compare-from-DBChIP.R) for R code of function.
+[R code of function](compare-from-DBChIP.R).
 
     > runallmethods(gr_hl_dbchip, f_prefix = "gr_high_low")
     #                    DiffBind  NCIS nosub
