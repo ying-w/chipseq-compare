@@ -5,7 +5,7 @@
 # 	the same but 11 being different (notice change to use tmp_ for files)
 if [ $# -eq 6 ]
 then
-	#removed fname but probably could have set it to ""
+	fname=.
 	echo $@ > MAnorm.log
 	echo "StepI: clean input"
 	zcat $1 | sed 's/\s$//g' | awk 'BEGIN {OFS="\t"}
@@ -90,14 +90,14 @@ then
     wait
 	cat ./$fname/tmp_read1a.bed ./$fname/tmp_read1b.bed > ./$fname/tmp_read1.bed
 	cat ./$fname/tmp_read2a.bed ./$fname/tmp_read2b.bed > ./$fname/tmp_read2.bed
-	echo "wc -l tmp_read1a.bed `wc -l ./$fname/tmp_read1a.bed`" >> ./$fname/${1}.log
-	echo "wc -l tmp_read1b.bed `wc -l ./$fname/tmp_read1b.bed`" >> ./$fname/${1}.log
-	echo "wc -l tmp_read2a.bed `wc -l ./$fname/tmp_read2a.bed`" >> ./$fname/${1}.log
-	echo "wc -l tmp_read2b.bed `wc -l ./$fname/tmp_read2b.bed`" >> ./$fname/${1}.log
-	echo "wc -l tmp_read1a_exclude.bed `wc -l ./$fname/tmp_read1a_exclude.bed`" >> ./$fname/${1}.log
-	echo "wc -l tmp_read1b_exclude.bed `wc -l ./$fname/tmp_read1b_exclude.bed`" >> ./$fname/${1}.log
-	echo "wc -l tmp_read2a_exclude.bed `wc -l ./$fname/tmp_read2a_exclude.bed`" >> ./$fname/${1}.log
-	echo "wc -l tmp_read2b_exclude.bed `wc -l ./$fname/tmp_read2b_exclude.bed`" >> ./$fname/${1}.log
+	echo "wc -l tmp_read1a.bed `wc -l ./$fname/tmp_read1a.bed`" >> ./$fname/MAnorm.log
+	echo "wc -l tmp_read1b.bed `wc -l ./$fname/tmp_read1b.bed`" >> ./$fname/MAnorm.log
+	echo "wc -l tmp_read2a.bed `wc -l ./$fname/tmp_read2a.bed`" >> ./$fname/MAnorm.log
+	echo "wc -l tmp_read2b.bed `wc -l ./$fname/tmp_read2b.bed`" >> ./$fname/MAnorm.log
+	echo "wc -l tmp_read1a_exclude.bed `wc -l ./$fname/tmp_read1a_exclude.bed`" >> ./$fname/MAnorm.log
+	echo "wc -l tmp_read1b_exclude.bed `wc -l ./$fname/tmp_read1b_exclude.bed`" >> ./$fname/MAnorm.log
+	echo "wc -l tmp_read2a_exclude.bed `wc -l ./$fname/tmp_read2a_exclude.bed`" >> ./$fname/MAnorm.log
+	echo "wc -l tmp_read2b_exclude.bed `wc -l ./$fname/tmp_read2b_exclude.bed`" >> ./$fname/MAnorm.log
 else
   #basename command will remove the directory part of the file as well as the suffix
   echo "$# arguments found"
@@ -116,7 +116,7 @@ intersectBed -a ./$fname/tmp_peak2.bed -b ./$fname/tmp_peak1.bed -v | sort -k1,1
 wait
 
 cat ./$fname/tmp_common_peak1.bed ./$fname/tmp_common_peak2.bed | mergeBed > ./$fname/tmp_common_peak.bed
-echo "wc -l tmp_common_peak.bed `wc -l ./$fname/tmp_common_peak.bed`" >> ./$fname/${1}.log
+echo "wc -l tmp_common_peak.bed `wc -l ./$fname/tmp_common_peak.bed`" >> ./$fname/MAnorm.log
 #cat common_peak1.bed common_peak2.bed > temp_common_peak.bed
 #mergeBed -i temp_common_peak.bed > common_peak.bed
 
@@ -157,12 +157,21 @@ cat ./$fname/tmp_unique_peak1_count_read2 ./$fname/tmp_merge_common_read2 ./$fna
 echo "SetpIV: normalize using common peaks"
 #R --vanilla MAnorm.r >Rcommand.out 
 #R CMD BATCH ../MAnorm.r Rcommand.out
-cd ./$fname/
-#R --no-restore --save < ../MAnorm2.r ${1}_Rcommand.out 
-#doesnt load .R that might slow things down but still loads usr+global env 
+
+
+if [ $# -eq 6 ]
+then
+    R CMD BATCH ./MAnorm2.R ${1}_Rcommand.out 
+elif [ $# -eq 11 ]
+then 
+    cd ./$fname/
+    R CMD BATCH ../MAnorm2.R ${1}_Rcommand.out 
+    cd ..
+fi
+
+#R --no-restore --save < ../MAnorm2.R ${1}_Rcommand.out 
+#doesnt load .RData, might slow things down but still loads usr+global env 
 #doesnt redirect nicely
-R CMD BATCH ../MAnorm2.R ${1}_Rcommand.out 
-cd ..
 
 #This is not a proper wig, I would be suprised this works
 #for format definition see: http://genome.ucsc.edu/goldenPath/help/wiggle.html
