@@ -48,7 +48,7 @@ This version uses [edgeR](http://www.bioconductor.org/packages/release/bioc/html
 Todo
 ----
 * Contact MAnorm author about some of the issues in p-value calculation and merging
-* Add error checks and helpeful diagnostic messages
+* Add error checks and helpful diagnostic messages
 * Add switch to check for .gz ending
 * Change code so samples with no replicates can run
 
@@ -62,7 +62,7 @@ This version tries to keep the same input/output as original MAnorm but has the 
 
 # Example of MAnorm3 run:
 ```bash
-MAnorm3.sh foler_name \
+MAnorm3.sh test_cond1_cond2 \
   peaksA.bed.gz \
   peaksB.bed.gz \
   readsA1.bed.gz \
@@ -74,11 +74,11 @@ MAnorm3.sh foler_name \
       
 Where `60` `70` `55` `53` correspond to shift lengths (half of estimated fragment length) for `readsA1.bed` `readsA2.bed` `readsB1.bed` `readsB2.bed` 
 and `readsA1` and `readsA2` are replicates used to identify peaks in `peaksA`. You must have MAnorm3.sh in your `$PATH` and MAnorm3.R must
-be in current working directory (you could modify this in MAnorm3.sh). As with before, the output is tab seperated file ending in .xls
+be in current working directory (you could modify this at the end of MAnorm3.sh). As with before, the output is tab seperated file ending in .xls
 
 Second example:
 
-    Usage: MAnorm3.sh foldername gr_peak.bed er_peak.bed gr_rep1.bed gr_rep2.bed er_rep1.bed er_rep2.bed 120 110 95 100
+    Usage: MAnorm3.sh test_cond1_cond2 gr_peak.bed er_peak.bed gr_rep1.bed gr_rep2.bed er_rep1.bed er_rep2.bed 120 110 95 100
 
     gr_peak.bed: sample 1 significant peak list
     er_peak.bed: sample 2 significant peak list
@@ -93,3 +93,4 @@ Second example:
     er_rep1: 95
     er_rep2: 100
 
+Note that test_cond1_cond2 is the name of the folder that will be created. The script is currently hardcoded to look for a (name)_(type1)_(type2) layout

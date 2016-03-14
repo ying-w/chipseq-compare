@@ -49,7 +49,8 @@
 # bounds checking when shifting since can result in negative coordinates
 # catch case when nothing is unique (same peaks file used)
 # catch for directory already exists (overwrite)
-# additional error checking (never ending)
+# additional error checking around file and folder creation
+# get rid of error msgs when _exclude file does not exist
 # someday I might rewrite the whole program to run it within R without bedtools
 
 fname=$1

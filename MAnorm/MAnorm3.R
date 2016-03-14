@@ -366,6 +366,7 @@ res$LRT = glmLRT(res$GLM,2)
 }
 
 require(edgeR)
+sessionInfo() # output for debug
 ################################################################################
 # Differential call using edgeR and normalized count matrix (offset matrix)
 ################################################################################
@@ -377,10 +378,11 @@ avgloglibsize = mean(log(res$samples$lib.size))
 offset_mat = offset_mat - mean(offset_mat) + avgloglibsize 
 #no TMM
 res$design = model.matrix(~res$samples$group)
-res = estimateGLMCommonDisp(res, res$design, offset = offset_mat)
-res = estimateGLMTagwiseDisp(res, res$design, offset = offset_mat) #not sure if this should be included
+res$offset = offset_mat
+res = estimateGLMCommonDisp(res, res$design)
+res = estimateGLMTagwiseDisp(res, res$design) #not sure if this should be included
 #no trended
-GLM = glmFit(res,res$design, offset = offset_mat); LRT = glmLRT(GLM,2)
+GLM = glmFit(res,res$design); LRT = glmLRT(GLM,2)
 
 # more plots
 #plotSmoothMA(normalized_all_count_mat)
@@ -448,11 +450,12 @@ resm = DGEList(all_merge_count_mat, group = c(1,1,0,0))
 offset_mat2 = log(all_merge_count_mat+1) - log(normalized_all_merge_count_mat+1)
 avgloglibsize = mean(log(resm$samples$lib.size))
 offset_mat2 = offset_mat2 - mean(offset_mat2) + avgloglibsize
+resm$offset = offset_mat2
 #no TMM
 resm$design = model.matrix(~resm$samples$group)
 resm = estimateGLMCommonDisp(resm,resm$design)
 resm = estimateGLMTagwiseDisp(resm,resm$design)  
-GLMm = glmFit(resm,resm$design, offset = offset_mat2)
+GLMm = glmFit(resm,resm$design)
 LRTm = glmLRT(GLMm,2)
 
 LRTm$qv = qvalue(LRTm$table$PValue)
