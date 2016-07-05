@@ -263,45 +263,45 @@ then
 	rm ./$fname/tmp_MAnorm.bed
 fi
 #appends are not atomic, cannot parallel >> so split up the tasks
-# coverageBed -a ./$fname/tmp_read1.bed -b ./$fname/tmp_unique_peak1.bed | awk -v fname="$fname" 'BEGIN {OFS="\t"} {print $1,$2,$3,"unique_peak1" >> "./"fname"/tmp_MAnorm.bed"; print $4 > "./"fname"/tmp_unique_peak1_count_read1"}'
-# coverageBed -a ./$fname/tmp_read2.bed -b ./$fname/tmp_unique_peak1.bed | awk -v fname="$fname" '{print $4 > "./"fname"/tmp_unique_peak1_count_read2"}'
-# coverageBed -a ./$fname/tmp_read1.bed -b ./$fname/tmp_common_peak1.bed | awk -v fname="$fname" 'BEGIN {OFS="\t"} {print $1,$2,$3,"common_peak1" >> "./"fname"/tmp_MAnorm.bed";print $4 > "./"fname"/tmp_common_peak1_count_read1"}'
-# coverageBed -a ./$fname/tmp_read2.bed -b ./$fname/tmp_common_peak1.bed | awk -v fname="$fname" '{print $4 > "./"fname"/tmp_common_peak1_count_read2"}'
-# coverageBed -a ./$fname/tmp_read1.bed -b ./$fname/tmp_common_peak2.bed | awk -v fname="$fname" 'BEGIN {OFS="\t"} {print $1,$2,$3,"common_peak2"  >> "./"fname"/tmp_MAnorm.bed";print $4 > "./"fname"/tmp_common_peak2_count_read1"}'
-# coverageBed -a ./$fname/tmp_read2.bed -b ./$fname/tmp_common_peak2.bed | awk -v fname="$fname" '{print $4 > "./"fname"/tmp_common_peak2_count_read2"}'
-# coverageBed -a ./$fname/tmp_read1.bed -b ./$fname/tmp_unique_peak2.bed | awk -v fname="$fname" 'BEGIN {OFS="\t"} {print $1,$2,$3,"unique_peak2">> "./"fname"/tmp_MAnorm.bed";print $4 > "./"fname"/tmp_unique_peak2_count_read1"}'
-# coverageBed -a ./$fname/tmp_read2.bed -b ./$fname/tmp_unique_peak2.bed | awk -v fname="$fname" '{print $4 > "./"fname"/tmp_unique_peak2_count_read2"}'
+# coverageBed -b ./$fname/tmp_read1.bed -a ./$fname/tmp_unique_peak1.bed | awk -v fname="$fname" 'BEGIN {OFS="\t"} {print $1,$2,$3,"unique_peak1" >> "./"fname"/tmp_MAnorm.bed"; print $4 > "./"fname"/tmp_unique_peak1_count_read1"}'
+# coverageBed -b ./$fname/tmp_read2.bed -a ./$fname/tmp_unique_peak1.bed | awk -v fname="$fname" '{print $4 > "./"fname"/tmp_unique_peak1_count_read2"}'
+# coverageBed -b ./$fname/tmp_read1.bed -a ./$fname/tmp_common_peak1.bed | awk -v fname="$fname" 'BEGIN {OFS="\t"} {print $1,$2,$3,"common_peak1" >> "./"fname"/tmp_MAnorm.bed";print $4 > "./"fname"/tmp_common_peak1_count_read1"}'
+# coverageBed -b ./$fname/tmp_read2.bed -a ./$fname/tmp_common_peak1.bed | awk -v fname="$fname" '{print $4 > "./"fname"/tmp_common_peak1_count_read2"}'
+# coverageBed -b ./$fname/tmp_read1.bed -a ./$fname/tmp_common_peak2.bed | awk -v fname="$fname" 'BEGIN {OFS="\t"} {print $1,$2,$3,"common_peak2"  >> "./"fname"/tmp_MAnorm.bed";print $4 > "./"fname"/tmp_common_peak2_count_read1"}'
+# coverageBed -b ./$fname/tmp_read2.bed -a ./$fname/tmp_common_peak2.bed | awk -v fname="$fname" '{print $4 > "./"fname"/tmp_common_peak2_count_read2"}'
+# coverageBed -b ./$fname/tmp_read1.bed -a ./$fname/tmp_unique_peak2.bed | awk -v fname="$fname" 'BEGIN {OFS="\t"} {print $1,$2,$3,"unique_peak2">> "./"fname"/tmp_MAnorm.bed";print $4 > "./"fname"/tmp_unique_peak2_count_read1"}'
+# coverageBed -b ./$fname/tmp_read2.bed -a ./$fname/tmp_unique_peak2.bed | awk -v fname="$fname" '{print $4 > "./"fname"/tmp_unique_peak2_count_read2"}'
 
 if [ $# -eq 7 ]
 then
-    coverageBed -a ./$fname/tmp_read1.bed -b ./$fname/tmp_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_unique_peak1_read1.counts &
-    coverageBed -a ./$fname/tmp_read2.bed -b ./$fname/tmp_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_unique_peak1_read2.counts &
-    coverageBed -a ./$fname/tmp_read1.bed -b ./$fname/tmp_common_peak1.bed | cut -f 1-4 > ./$fname/tmp_common_peak1_read1.counts &
-    coverageBed -a ./$fname/tmp_read2.bed -b ./$fname/tmp_common_peak1.bed | cut -f 1-4 > ./$fname/tmp_common_peak1_read2.counts &
-    coverageBed -a ./$fname/tmp_read1.bed -b ./$fname/tmp_common_peak2.bed | cut -f 1-4 > ./$fname/tmp_common_peak2_read1.counts &
-    coverageBed -a ./$fname/tmp_read2.bed -b ./$fname/tmp_common_peak2.bed | cut -f 1-4 > ./$fname/tmp_common_peak2_read2.counts &
-    coverageBed -a ./$fname/tmp_read1.bed -b ./$fname/tmp_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_unique_peak2_read1.counts &
-    coverageBed -a ./$fname/tmp_read2.bed -b ./$fname/tmp_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_unique_peak2_read2.counts &
+    coverageBed -b ./$fname/tmp_read1.bed -a ./$fname/tmp_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_unique_peak1_read1.counts &
+    coverageBed -b ./$fname/tmp_read2.bed -a ./$fname/tmp_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_unique_peak1_read2.counts &
+    coverageBed -b ./$fname/tmp_read1.bed -a ./$fname/tmp_common_peak1.bed | cut -f 1-4 > ./$fname/tmp_common_peak1_read1.counts &
+    coverageBed -b ./$fname/tmp_read2.bed -a ./$fname/tmp_common_peak1.bed | cut -f 1-4 > ./$fname/tmp_common_peak1_read2.counts &
+    coverageBed -b ./$fname/tmp_read1.bed -a ./$fname/tmp_common_peak2.bed | cut -f 1-4 > ./$fname/tmp_common_peak2_read1.counts &
+    coverageBed -b ./$fname/tmp_read2.bed -a ./$fname/tmp_common_peak2.bed | cut -f 1-4 > ./$fname/tmp_common_peak2_read2.counts &
+    coverageBed -b ./$fname/tmp_read1.bed -a ./$fname/tmp_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_unique_peak2_read1.counts &
+    coverageBed -b ./$fname/tmp_read2.bed -a ./$fname/tmp_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_unique_peak2_read2.counts &
     wait
 elif [ $# -eq 11 ]
 then
-	coverageBed -a ./$fname/tmp_read1a.bed -b ./$fname/tmp_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_unique_peak1_read1a.counts &
-	coverageBed -a ./$fname/tmp_read2a.bed -b ./$fname/tmp_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_unique_peak1_read2a.counts &
-	coverageBed -a ./$fname/tmp_read1a.bed -b ./$fname/tmp_common_peak1.bed | cut -f 1-4 > ./$fname/tmp_common_peak1_read1a.counts &
-	coverageBed -a ./$fname/tmp_read2a.bed -b ./$fname/tmp_common_peak1.bed | cut -f 1-4 > ./$fname/tmp_common_peak1_read2a.counts &
-	coverageBed -a ./$fname/tmp_read1a.bed -b ./$fname/tmp_common_peak2.bed | cut -f 1-4 > ./$fname/tmp_common_peak2_read1a.counts &
-	coverageBed -a ./$fname/tmp_read2a.bed -b ./$fname/tmp_common_peak2.bed | cut -f 1-4 > ./$fname/tmp_common_peak2_read2a.counts &
-	coverageBed -a ./$fname/tmp_read1a.bed -b ./$fname/tmp_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_unique_peak2_read1a.counts &
-	coverageBed -a ./$fname/tmp_read2a.bed -b ./$fname/tmp_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_unique_peak2_read2a.counts &	
+	coverageBed -b ./$fname/tmp_read1a.bed -a ./$fname/tmp_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_unique_peak1_read1a.counts &
+	coverageBed -b ./$fname/tmp_read2a.bed -a ./$fname/tmp_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_unique_peak1_read2a.counts &
+	coverageBed -b ./$fname/tmp_read1a.bed -a ./$fname/tmp_common_peak1.bed | cut -f 1-4 > ./$fname/tmp_common_peak1_read1a.counts &
+	coverageBed -b ./$fname/tmp_read2a.bed -a ./$fname/tmp_common_peak1.bed | cut -f 1-4 > ./$fname/tmp_common_peak1_read2a.counts &
+	coverageBed -b ./$fname/tmp_read1a.bed -a ./$fname/tmp_common_peak2.bed | cut -f 1-4 > ./$fname/tmp_common_peak2_read1a.counts &
+	coverageBed -b ./$fname/tmp_read2a.bed -a ./$fname/tmp_common_peak2.bed | cut -f 1-4 > ./$fname/tmp_common_peak2_read2a.counts &
+	coverageBed -b ./$fname/tmp_read1a.bed -a ./$fname/tmp_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_unique_peak2_read1a.counts &
+	coverageBed -b ./$fname/tmp_read2a.bed -a ./$fname/tmp_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_unique_peak2_read2a.counts &	
     
-	coverageBed -a ./$fname/tmp_read1b.bed -b ./$fname/tmp_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_unique_peak1_read1b.counts &
-	coverageBed -a ./$fname/tmp_read2b.bed -b ./$fname/tmp_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_unique_peak1_read2b.counts &
-	coverageBed -a ./$fname/tmp_read1b.bed -b ./$fname/tmp_common_peak1.bed | cut -f 1-4 > ./$fname/tmp_common_peak1_read1b.counts &
-	coverageBed -a ./$fname/tmp_read2b.bed -b ./$fname/tmp_common_peak1.bed | cut -f 1-4 > ./$fname/tmp_common_peak1_read2b.counts &
-	coverageBed -a ./$fname/tmp_read1b.bed -b ./$fname/tmp_common_peak2.bed | cut -f 1-4 > ./$fname/tmp_common_peak2_read1b.counts &
-	coverageBed -a ./$fname/tmp_read2b.bed -b ./$fname/tmp_common_peak2.bed | cut -f 1-4 > ./$fname/tmp_common_peak2_read2b.counts &
-	coverageBed -a ./$fname/tmp_read1b.bed -b ./$fname/tmp_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_unique_peak2_read1b.counts &
-	coverageBed -a ./$fname/tmp_read2b.bed -b ./$fname/tmp_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_unique_peak2_read2b.counts &	
+	coverageBed -b ./$fname/tmp_read1b.bed -a ./$fname/tmp_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_unique_peak1_read1b.counts &
+	coverageBed -b ./$fname/tmp_read2b.bed -a ./$fname/tmp_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_unique_peak1_read2b.counts &
+	coverageBed -b ./$fname/tmp_read1b.bed -a ./$fname/tmp_common_peak1.bed | cut -f 1-4 > ./$fname/tmp_common_peak1_read1b.counts &
+	coverageBed -b ./$fname/tmp_read2b.bed -a ./$fname/tmp_common_peak1.bed | cut -f 1-4 > ./$fname/tmp_common_peak1_read2b.counts &
+	coverageBed -b ./$fname/tmp_read1b.bed -a ./$fname/tmp_common_peak2.bed | cut -f 1-4 > ./$fname/tmp_common_peak2_read1b.counts &
+	coverageBed -b ./$fname/tmp_read2b.bed -a ./$fname/tmp_common_peak2.bed | cut -f 1-4 > ./$fname/tmp_common_peak2_read2b.counts &
+	coverageBed -b ./$fname/tmp_read1b.bed -a ./$fname/tmp_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_unique_peak2_read1b.counts &
+	coverageBed -b ./$fname/tmp_read2b.bed -a ./$fname/tmp_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_unique_peak2_read2b.counts &	
 	wait
 	# .counts have 4 col: coordinates + count
 	cat ./$fname/tmp_common_peak1_read1a.counts ./$fname/tmp_common_peak2_read1a.counts > ./$fname/tmp_common_peak_read1a.counts &
@@ -344,28 +344,28 @@ fi
 
 if [ $# -eq 7 ]
 then
-    coverageBed -a ./$fname/tmp_read1.bed -b ./$fname/tmp_merge_common_peak.bed | cut -f 1-4 > ./$fname/tmp_merge_common_read1.counts &
-    coverageBed -a ./$fname/tmp_read2.bed -b ./$fname/tmp_merge_common_peak.bed | cut -f 1-4 > ./$fname/tmp_merge_common_read2.counts &
+    coverageBed -b ./$fname/tmp_read1.bed -a ./$fname/tmp_merge_common_peak.bed | cut -f 1-4 > ./$fname/tmp_merge_common_read1.counts &
+    coverageBed -b ./$fname/tmp_read2.bed -a ./$fname/tmp_merge_common_peak.bed | cut -f 1-4 > ./$fname/tmp_merge_common_read2.counts &
     
-    coverageBed -a ./$fname/tmp_read1.bed -b ./$fname/tmp_merge_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak1_read1.counts &
-    coverageBed -a ./$fname/tmp_read2.bed -b ./$fname/tmp_merge_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak1_read2.counts &
-    coverageBed -a ./$fname/tmp_read1.bed -b ./$fname/tmp_merge_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak2_read1.counts &
-    coverageBed -a ./$fname/tmp_read2.bed -b ./$fname/tmp_merge_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak2_read2.counts &
+    coverageBed -b ./$fname/tmp_read1.bed -a ./$fname/tmp_merge_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak1_read1.counts &
+    coverageBed -b ./$fname/tmp_read2.bed -a ./$fname/tmp_merge_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak1_read2.counts &
+    coverageBed -b ./$fname/tmp_read1.bed -a ./$fname/tmp_merge_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak2_read1.counts &
+    coverageBed -b ./$fname/tmp_read2.bed -a ./$fname/tmp_merge_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak2_read2.counts &
 elif [ $# -eq 11 ]
 then
-	coverageBed -a ./$fname/tmp_read1a.bed -b ./$fname/tmp_merge_common_peak.bed | cut -f 1-4 > ./$fname/tmp_merge_common_read1a.counts &
-	coverageBed -a ./$fname/tmp_read2a.bed -b ./$fname/tmp_merge_common_peak.bed | cut -f 1-4 > ./$fname/tmp_merge_common_read2a.counts &
-	coverageBed -a ./$fname/tmp_read1b.bed -b ./$fname/tmp_merge_common_peak.bed | cut -f 1-4 > ./$fname/tmp_merge_common_read1b.counts &
-	coverageBed -a ./$fname/tmp_read2b.bed -b ./$fname/tmp_merge_common_peak.bed | cut -f 1-4 > ./$fname/tmp_merge_common_read2b.counts &
+	coverageBed -b ./$fname/tmp_read1a.bed -a ./$fname/tmp_merge_common_peak.bed | cut -f 1-4 > ./$fname/tmp_merge_common_read1a.counts &
+	coverageBed -b ./$fname/tmp_read2a.bed -a ./$fname/tmp_merge_common_peak.bed | cut -f 1-4 > ./$fname/tmp_merge_common_read2a.counts &
+	coverageBed -b ./$fname/tmp_read1b.bed -a ./$fname/tmp_merge_common_peak.bed | cut -f 1-4 > ./$fname/tmp_merge_common_read1b.counts &
+	coverageBed -b ./$fname/tmp_read2b.bed -a ./$fname/tmp_merge_common_peak.bed | cut -f 1-4 > ./$fname/tmp_merge_common_read2b.counts &
     
-    coverageBed -a ./$fname/tmp_read1a.bed -b ./$fname/tmp_merge_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak1_read1a.counts &
-    coverageBed -a ./$fname/tmp_read1b.bed -b ./$fname/tmp_merge_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak1_read1b.counts &
-    coverageBed -a ./$fname/tmp_read2a.bed -b ./$fname/tmp_merge_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak1_read2a.counts &
-    coverageBed -a ./$fname/tmp_read2b.bed -b ./$fname/tmp_merge_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak1_read2b.counts &
-    coverageBed -a ./$fname/tmp_read1a.bed -b ./$fname/tmp_merge_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak2_read1a.counts &
-    coverageBed -a ./$fname/tmp_read1b.bed -b ./$fname/tmp_merge_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak2_read1b.counts &
-    coverageBed -a ./$fname/tmp_read2a.bed -b ./$fname/tmp_merge_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak2_read2a.counts &
-    coverageBed -a ./$fname/tmp_read2b.bed -b ./$fname/tmp_merge_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak2_read2b.counts &
+    coverageBed -b ./$fname/tmp_read1a.bed -a ./$fname/tmp_merge_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak1_read1a.counts &
+    coverageBed -b ./$fname/tmp_read1b.bed -a ./$fname/tmp_merge_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak1_read1b.counts &
+    coverageBed -b ./$fname/tmp_read2a.bed -a ./$fname/tmp_merge_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak1_read2a.counts &
+    coverageBed -b ./$fname/tmp_read2b.bed -a ./$fname/tmp_merge_unique_peak1.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak1_read2b.counts &
+    coverageBed -b ./$fname/tmp_read1a.bed -a ./$fname/tmp_merge_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak2_read1a.counts &
+    coverageBed -b ./$fname/tmp_read1b.bed -a ./$fname/tmp_merge_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak2_read1b.counts &
+    coverageBed -b ./$fname/tmp_read2a.bed -a ./$fname/tmp_merge_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak2_read2a.counts &
+    coverageBed -b ./$fname/tmp_read2b.bed -a ./$fname/tmp_merge_unique_peak2.bed | cut -f 1-4 > ./$fname/tmp_merge_unique_peak2_read2b.counts &
 	wait
     
 	cat ./$fname/tmp_merge_unique_peak1_read1a.counts ./$fname/tmp_merge_common_read1a.counts ./$fname/tmp_merge_unique_peak2_read1a.counts > ./$fname/tmp_merge_common_peak_read1a.counts &
