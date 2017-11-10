@@ -1,6 +1,6 @@
 # MAnorm - identifying differential binding in chip-seq data using linear normalization on shared peaks
 
-MAnorm3 is my improved version which allows for 2 v 2 comparisons (replicates) using edgeR. I published a paper comparing this method to others [here](https://www.ncbi.nlm.nih.gov/pubmed/25972895)
+MAnorm3 is my improved version which allows for 2 v 2 comparisons (replicates) using edgeR. I published a paper comparing this method to others: https://www.ncbi.nlm.nih.gov/pubmed/25972895
 
 Original MAnorm can be found [here](http://bcb.dfci.harvard.edu/~gcyuan/MAnorm/R_tutorial.html) 
 Published in [Genome Biology 2012](http://www.ncbi.nlm.nih.gov/pubmed/22424423)
